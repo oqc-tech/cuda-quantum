@@ -17,6 +17,8 @@
 
 namespace cudaq {
 
+class noise_model;
+
 /// Expose the function that will return the current ExecutionManager
 ExecutionManager *getExecutionManager();
 

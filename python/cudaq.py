@@ -11,7 +11,7 @@ import sys
 from _pycudaq import *
 from domains import chemistry
 
-initKwargs = {'qpu': 'qpp', 'platform': 'default'}
+initKwargs = {'qpu': 'qpp', 'platform': 'oqc'}
 
 if '-qpu' in sys.argv:
     initKwargs['qpu'] = sys.argv[sys.argv.index('-qpu') + 1]

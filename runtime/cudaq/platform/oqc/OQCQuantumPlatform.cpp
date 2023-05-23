@@ -60,4 +60,4 @@ public:
 
 }
 
-//CUDAQ_REGISTER_PLATFORM(OQCQuantumPlatform, oqc)
+CUDAQ_REGISTER_PLATFORM(OQCQuantumPlatform, oqc)

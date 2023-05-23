@@ -7,6 +7,7 @@
 # ============================================================================ #
 
 add_subdirectory(default)
+add_subdirectory(oqc)
 if (CUDA_FOUND AND CUSTATEVEC_ROOT)
   add_subdirectory(mqpu)
 endif()

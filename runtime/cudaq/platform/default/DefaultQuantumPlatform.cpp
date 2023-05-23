@@ -153,8 +153,4 @@ public:
 };
 } // namespace
 
-/* TODO we should be able to reenable this 1. either by having macros create
- * unique symbols for for getQuantumPlatform or by moving each platform to
- * it's own library
- */
 CUDAQ_REGISTER_PLATFORM(DefaultQuantumPlatform, default)
