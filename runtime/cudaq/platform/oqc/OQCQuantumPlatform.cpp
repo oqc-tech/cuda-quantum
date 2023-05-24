@@ -30,6 +30,10 @@ public:
 
   /// Enqueue a quantum task on the asynchronous execution queue.
   virtual void enqueue(QuantumTask &task) override {
+
+    // TODO AFAIK this is where we can step in and get these asysnc
+    // promises executed via QAT QIR frontend
+
     execution_queue->enqueue(task);
   }
 
