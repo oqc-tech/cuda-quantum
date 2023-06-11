@@ -5,6 +5,7 @@
 #include "common/Logger.h"
 #include <stdexcept>
 #include <memory>
+#include <iostream>
 
 using cudaq::QPU;
 using cudaq::noise_model;
@@ -26,14 +27,18 @@ public:
     kernelFunc(args);
   }
 
-  virtual bool isSimulator() override { return false; }
+  virtual bool isSimulator() override { 
+    std::cout << "AM I A SMIULATOR? \n";
+    
+    return false; 
+  }
 
   /// Enqueue a quantum task on the asynchronous execution queue.
   virtual void enqueue(QuantumTask &task) override {
 
     // TODO AFAIK this is where we can step in and get these asysnc
     // promises executed via QAT QIR frontend
-
+    std::cout << "\n TEST TEST TEST \n";
     execution_queue->enqueue(task);
   }
 
