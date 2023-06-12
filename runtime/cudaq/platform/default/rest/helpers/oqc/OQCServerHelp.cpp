@@ -107,8 +107,7 @@ std::string OQCServerHelper::getEnvVar(const std::string &key) const {
   if (env_var.empty()) {
     throw std::runtime_error(key + " environment variable is not set.");
   }
-  // Return the variable as a string
-  return std::string(env_var);
+  return env_var;
 }
 
 // Check if a key exists in the backend configuration
@@ -134,7 +133,7 @@ OQCServerHelper::createJob(std::vector<KernelExecution> &circuitCodes) {
   auto n_circuits = static_cast<int>(circuitCodes.size());
   std::vector<ServerMessage> jobs(n_circuits);
   auto task_ids = OQCServerHelper::getJobID(n_circuits);
-  for (auto i = 0; i < n_circuits; i++){
+  for (auto i = 0; i < n_circuits; ++i){
     // Construct the job message
     auto& job = jobs[i];
     job["task_id"] = task_ids[i];
