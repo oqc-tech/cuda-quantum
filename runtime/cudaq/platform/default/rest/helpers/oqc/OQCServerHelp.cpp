@@ -9,9 +9,7 @@
 #include "common/Logger.h"
 #include "common/RestClient.h"
 #include "common/ServerHelper.h"
-#include "cudaq/utils/cudaq_utils.h"
-#include <fstream>
-#include <thread>
+#include <string>
 
 namespace cudaq {
 
@@ -104,9 +102,9 @@ void OQCServerHelper::initialize(BackendConfig config) {
 // Retrieve an environment variable
 std::string OQCServerHelper::getEnvVar(const std::string &key) const {
   // Get the environment variable
-  const char *env_var = std::getenv(key.c_str());
+  const std::string env_var = std::getenv(key.c_str());
   // If the variable is not set, throw an exception
-  if (env_var == nullptr) {
+  if (env_var.empty()) {
     throw std::runtime_error(key + " environment variable is not set.");
   }
   // Return the variable as a string
@@ -133,16 +131,15 @@ OQCServerHelper::createJob(std::vector<KernelExecution> &circuitCodes) {
   // Check if the necessary keys exist in the configuration
   if (!keyExists("target") || !keyExists("qubits") || !keyExists("job_path"))
     throw std::runtime_error("Key doesn't exist in backendConfig.");
-  std::vector<ServerMessage> jobs;
-  int number_of_circuits = static_cast<int>(circuitCodes.size());
-  std::vector<std::string> task_ids = OQCServerHelper::getJobID(number_of_circuits);
-  for (int i = 0; i<=number_of_circuits; i++){
+  auto n_circuits = static_cast<int>(circuitCodes.size());
+  std::vector<ServerMessage> jobs(n_circuits);
+  auto task_ids = OQCServerHelper::getJobID(n_circuits);
+  for (auto i = 0; i < n_circuits; i++){
     // Construct the job message
-    ServerMessage job;
+    auto& job = jobs[i];
     job["task_id"] = task_ids[i];
     job["config"] = makeConfig(static_cast<int>(shots));
     job["program"] = circuitCodes[i].code;
-    jobs.push_back(job);
   }
 
   // Return a tuple containing the job path, headers, and the job message
@@ -240,8 +237,10 @@ RestHeaders OQCServerHelper::getHeaders() {
 
   // Construct the headers
   RestHeaders headers;
-  nlohmann::json_v3_11_1::json json_for_headers("{\"email\": "+ backendConfig.at("email") + "\"password\": + " + backendConfig.at("password") + "}");
-//   std::map<std::string, std::string> headers;
+  std::map<std::string, std::string> auth_map = { {"email", backendConfig.at("email")},
+                            {"password", backendConfig.at("password")}};
+
+  nlohmann::json_v3_11_1::json json_for_headers(auth_map);
   std::string key = client.post(backendConfig.at("url"), "/auth", json_for_headers, headers);
   headers["Authorization"] = "Bearer "+key;
   headers["Content-Type"] = "application/json";
