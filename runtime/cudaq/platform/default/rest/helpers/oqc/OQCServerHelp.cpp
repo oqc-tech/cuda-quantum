@@ -131,14 +131,15 @@ OQCServerHelper::createJob(std::vector<KernelExecution> &circuitCodes) {
   if (!keyExists("target") || !keyExists("qubits") || !keyExists("job_path"))
     throw std::runtime_error("Key doesn't exist in backendConfig.");
   auto n_circuits = static_cast<int>(circuitCodes.size());
-  std::vector<ServerMessage> jobs(n_circuits);
+  std::vector<ServerMessage> jobs(circuitCodes.size());
   auto task_ids = OQCServerHelper::getJobID(n_circuits);
-  for (auto i = 0; i < n_circuits; ++i){
+  auto config = makeConfig(static_cast<int>(shots));
+  for (size_t i = 0; i < circuitCodes.size(); ++i){
     // Construct the job message
     auto& job = jobs[i];
     job["task_id"] = task_ids[i];
-    job["config"] = makeConfig(static_cast<int>(shots));
     job["program"] = circuitCodes[i].code;
+    job["config"] = config;
   }
 
   // Return a tuple containing the job path, headers, and the job message
