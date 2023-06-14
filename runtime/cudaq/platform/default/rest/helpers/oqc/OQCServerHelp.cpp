@@ -12,6 +12,7 @@
 #include "cudaq/utils/cudaq_utils.h"
 #include <fstream>
 #include <thread>
+#include <iostream>
 
 namespace cudaq {
 
@@ -20,6 +21,7 @@ namespace cudaq {
 /// computation jobs.
 class OQCServerHelper : public ServerHelper {
 private:
+
   /// @brief RestClient used for HTTP requests.
   RestClient client;
 
@@ -33,7 +35,9 @@ private:
 
   std::string makeConfig(int shots);
 
+
 public:
+
   /// @brief Returns the name of the server helper.
   const std::string name() const override { return "OQC"; }
 
@@ -82,6 +86,7 @@ public:
 // Initialize the OQC server helper with a given backend configuration
 void OQCServerHelper::initialize(BackendConfig config) {
   cudaq::info("Initializing OQC Backend.");
+  std::cout<<"initing backemd\n";
   // Move the passed config into the member variable backendConfig
   backendConfig = std::move(config);
   // Set the necessary configuration variables for the OQC API
@@ -94,8 +99,8 @@ void OQCServerHelper::initialize(BackendConfig config) {
       config.find("qpu") != config.end() ? config["qpu"] : "simulator";
   backendConfig["qubits"] = 8;
   // Retrieve the API key from the environment variables
-  backendConfig["email"] = getEnvVar("OQC_EMAIL");
-  backendConfig["password"] = getEnvVar("OQC_PASSWORD");
+  backendConfig["email"] = "software+no-reply@oxfordquantumcircuits.com"; //getEnvVar("OQC_EMAIL");
+  backendConfig["password"] = "softwAre123!"; //getEnvVar("OQC_PASSWORD");
   // Construct the API job path
   backendConfig["job_path"] =
       backendConfig["url"] + "/tasks";
@@ -131,6 +136,7 @@ std::string OQCServerHelper::makeConfig(int shots){
 ServerJobPayload
 OQCServerHelper::createJob(std::vector<KernelExecution> &circuitCodes) {
   // Check if the necessary keys exist in the configuration
+  std::cout<<"creating jobn";
   if (!keyExists("target") || !keyExists("qubits") || !keyExists("job_path"))
     throw std::runtime_error("Key doesn't exist in backendConfig.");
   std::vector<ServerMessage> jobs;

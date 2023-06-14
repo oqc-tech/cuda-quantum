@@ -5,6 +5,8 @@
 
 #include <cudaq.h>
 
+
+
 __qpu__ void reflect_about_uniform(cudaq::qspan<> q) {
   auto ctrlQubits = q.front(q.size() - 1);
   auto &lastQubit = q.back();

@@ -14,6 +14,7 @@
 #include "cudaq/qis/qubit_qis.h"
 #include "cudaq/spin_op.h"
 #include <fstream>
+#include <iostream>
 
 /// This file defines the default, library mode, quantum platform.
 /// Its goal is to create a single QPU that is added to the quantum_platform
@@ -124,6 +125,7 @@ public:
     }
 
     std::string fileName = mutableBackend + std::string(".config");
+    std::cout << fileName;
 
     /// Once we know the backend, we should search for the config file
     /// from there we can get the URL/PORT and the required MLIR pass pipeline.
