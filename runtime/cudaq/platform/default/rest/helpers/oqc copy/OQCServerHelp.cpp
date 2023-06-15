@@ -13,6 +13,7 @@
 #include <fstream>
 #include <thread>
 #include <iostream>
+
 namespace cudaq {
 
 /// @brief The OQCServerHelper class extends the ServerHelper class to handle
@@ -95,13 +96,15 @@ void OQCServerHelper::initialize(BackendConfig config) {
   //                            : "http://localhost:5000";
   backendConfig["version"] = "v0.3";
   backendConfig["user_agent"] = "cudaq/0.3.0";
-  backendConfig["target"] = config.find("qpu") != config.end() ? config["qpu"] : "simulator";
+  backendConfig["target"] =
+      config.find("qpu") != config.end() ? config["qpu"] : "simulator";
   backendConfig["qubits"] = 8;
   // Retrieve the API key from the environment variables
   backendConfig["email"] = "software+no-reply@oxfordquantumcircuits.com"; //getEnvVar("OQC_EMAIL");
-  backendConfig["password"] = std::string("softwAre123!"); //getEnvVar("OQC_PASSWORD");
+  backendConfig["password"] = "softwAre123!"; //getEnvVar("OQC_PASSWORD");
   // Construct the API job path
-  backendConfig["job_path"] = "/tasks";// backendConfig["url"] + "/tasks";
+  backendConfig["job_path"] =
+      backendConfig["url"] + "/tasks";
 }
 
 // Retrieve an environment variable
@@ -122,18 +125,8 @@ bool OQCServerHelper::keyExists(const std::string &key) const {
 }
 
 std::vector<std::string> OQCServerHelper::getJobID(int n){
-    // RestHeaders headers = this -> getHeaders();
-    RestHeaders headers = OQCServerHelper::getHeaders();
-    std::cout<<"getting task id\n";
-    nlohmann::json j;
-    std::vector<std::string> output;
-    // nlohmann::json_v3_11_1::json response = client.get(backendConfig.at("url"), backendConfig.at("job_path")+"?n=" + std::to_string(n), headers);
-    for(int i = 0; i < n; ++i){
-      nlohmann::json_v3_11_1::json response = client.post(backendConfig.at("url"), backendConfig.at("job_path"), j, headers);
-      output.push_back(response[0]);
-    }
-    // std::cout << response << "\n";
-    return output;
+    RestHeaders headers = this -> getHeaders();
+    return client.get(backendConfig.at("job_path")+"/?" + std::to_string(n), "", headers );
 }
 
 std::string OQCServerHelper::makeConfig(int shots){
@@ -148,25 +141,14 @@ ServerJobPayload OQCServerHelper::createJob(std::vector<KernelExecution> &circui
     throw std::runtime_error("Key doesn't exist in backendConfig.");
   std::vector<ServerMessage> jobs;
   int number_of_circuits = static_cast<int>(circuitCodes.size());
-  std::cout<<"number of circuits " << std::to_string(number_of_circuits) << "\n";
   std::vector<std::string> task_ids = OQCServerHelper::getJobID(number_of_circuits);
-
-  std::cout<<"We have the task ids now\n";
-
-  
-
-  for (int i = 0; i<number_of_circuits; i++){
-    nlohmann::json j;
-    j["tasks"] = std::vector<nlohmann::json>();
+  for (int i = 0; i<=number_of_circuits; i++){
     // Construct the job message
-    std::cout << "creating job number\n";
-    nlohmann::json job;
+    ServerMessage job;
     job["task_id"] = task_ids[i];
     job["config"] = makeConfig(static_cast<int>(shots));
     job["program"] = circuitCodes[i].code;
-    j["tasks"].push_back(job);
-    std::cout<<j<<"\n";
-    jobs.push_back(j);
+    jobs.push_back(job);
   }
 
   // Return a tuple containing the job path, headers, and the job message
@@ -264,31 +246,12 @@ RestHeaders OQCServerHelper::getHeaders() {
 
   // Construct the headers
   RestHeaders headers;
-  // nlohmann::json_v3_11_1::json json_for_headers("{\'email\': \'"+ backendConfig.at("email") + "\', \'password\': \'" + backendConfig.at("password") + "\'}");
-  // std::string json_for_headers ="{\'email\': \'"+ backendConfig.at("email") + "\', \'password\': \'" + backendConfig.at("password") + "\'}";
-  // std::map<std::string, std::string> headers;
-  // std::map<std::string, std::string> auth_map = { {"email", backendConfig.at("email")}, {"password", backendConfig.at("password")}};
-
-  // nlohmann::json tmpjson_for_headers(auth_map);
-  // std::cout<< tmpjson_for_headers << " " << typeid(tmpjson_for_headers).name() <<"\n";
-  nlohmann::json j;
-  j["email"] = backendConfig.at("email");
-
-  // std::string pw = R"softwAre123!";
-  j["password"] =  "softwAre123@"; //backendConfig.at("password");
-
-  std::cout<<"getting headers\n";
-  nlohmann::json response = client.post(backendConfig.at("url"), "/auth", j, headers);
-
-  // nlohmann::json response;
-
-  std::string key = response.at("access_token");
-  std::cout<< key << "\n";
-  std::cout<<"headers got\n";
+  nlohmann::json_v3_11_1::json json_for_headers("{\"email\": "+ backendConfig.at("email") + "\"password\": + " + backendConfig.at("password") + "}");
+//   std::map<std::string, std::string> headers;
+  std::string key = client.post(backendConfig.at("url"), "/auth", json_for_headers, headers);
   headers["Authorization"] = "Bearer "+key;
   headers["Content-Type"] = "application/json";
   // Return the headers
-  std::cout<<"returning headers \n";
   return headers;
 }
 

@@ -24,12 +24,13 @@ protected:
 
   /// @brief The ServerHelper, providing system-specific JSON-formatted
   /// job posts and results translation
-  ServerHelper *serverHelper;
 
   /// @brief The number of shots to execute
   std::size_t shots = 100;
 
 public:
+  ServerHelper *serverHelper;
+
   Executor() = default;
   virtual ~Executor() = default;
 
