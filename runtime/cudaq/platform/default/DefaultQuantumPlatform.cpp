@@ -117,7 +117,12 @@ public:
   /// specified by that variable.
   void setTargetBackend(const std::string &backend) override {
     std::filesystem::path cudaqLibPath{cudaq::getCUDAQLibraryPath()};
-    auto platformPath = cudaqLibPath.parent_path().parent_path() / "platforms";
+    auto platformPath = cudaqLibPath.parent_path().parent_path() / "targets";
+    std::cout<<"SETTING BACKEND\n";
+    std::cout<<backend;
+    std::cout<<"\n";
+    std::cout<<"continuing\n";
+
 
     auto mutableBackend = backend;
     if (mutableBackend.find(";") != std::string::npos) {
@@ -131,6 +136,11 @@ public:
     /// from there we can get the URL/PORT and the required MLIR pass pipeline.
     auto configFilePath = platformPath / fileName;
     cudaq::info("Config file path = {}", configFilePath.string());
+
+    if (!std::filesystem::exists(configFilePath)){
+      std::cout<<"FILE DOES NOT EXIST: " + configFilePath.string() + "\n";
+      return;
+    }
 
     std::ifstream configFile(configFilePath.string());
     std::string configContents((std::istreambuf_iterator<char>(configFile)),

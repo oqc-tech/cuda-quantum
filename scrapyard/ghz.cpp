@@ -42,7 +42,9 @@ int main() {
   // return 0;
 
   auto &platform = cudaq::get_platform();
-  platform.setTargetBackend("OQC;qpu;/workspaces/cuda-quantum-oqc/runtime/cudaq/platform/default/rest/helpers/oqc/oqc");
+  
+  std::string backend = "oqc;qpu;/workspaces/cuda-quantum-oqc/runtime/cudaq/platform/default/rest/helpers/oqc/oqc.config";
+  platform.setTargetBackend(backend);
   platform.is_simulator();
   auto kernel = cudaq::make_kernel();
   auto qubit = kernel.qalloc(2);
@@ -51,4 +53,7 @@ int main() {
 
   auto counts = cudaq::sample(kernel);
   counts.dump();
+
+
+  
 }
