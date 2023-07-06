@@ -35,8 +35,6 @@ target_link_libraries(cudaq-rest-qpu
 
 cudaq_library_set_rpath(cudaq-rest-qpu)
 
-add_subdirectory(helpers)
-
 
 install(TARGETS cudaq-rest-qpu DESTINATION lib)
 
