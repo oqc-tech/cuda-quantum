@@ -1,10 +1,10 @@
-/*************************************************************** -*- C++ -*- ***
+/****************************************************************-*- C++ -*-****
  * Copyright (c) 2022 - 2023 NVIDIA Corporation & Affiliates.                  *
  * All rights reserved.                                                        *
  *                                                                             *
  * This source code and the accompanying materials are made available under    *
  * the terms of the Apache License 2.0 which accompanies this distribution.    *
- *******************************************************************************/
+ ******************************************************************************/
 
 #pragma once
 
@@ -28,7 +28,7 @@ namespace nvqir {
 /// execution context handling, and defines all quantum operations pure
 /// virtual methods that subtypes must implement. Subtypes should be responsible
 /// for evolution of the concrete wave function representation (e.g.,
-/// statevector), sampling, and measurements.
+/// state vector), sampling, and measurements.
 class CircuitSimulator {
 protected:
   /// @brief Flush the current queue of gates, i.e.
@@ -61,7 +61,7 @@ public:
   /// @brief Allocate `count` qubits.
   virtual std::vector<std::size_t> allocateQubits(const std::size_t count) = 0;
 
-  /// @brief Deallocate the qubit with give idx
+  /// @brief Deallocate the qubit with give unique index
   virtual void deallocate(const std::size_t qubitIdx) = 0;
 
   /// @brief Deallocate all the provided qubits.
@@ -141,6 +141,16 @@ public:
                   const std::vector<std::size_t> &controls,
                   const std::size_t qubitIdx) = 0;
 
+  void phased_rx(const double phi, const double lambda,
+                 const std::size_t qubitIdx) {
+    std::vector<std::size_t> controls;
+    phased_rx(phi, lambda, controls, qubitIdx);
+  }
+
+  virtual void phased_rx(const double phi, const double lambda,
+                         const std::vector<std::size_t> &controls,
+                         const std::size_t qubitIdx) = 0;
+
   void u3(const double theta, const double phi, const double lambda,
           const std::size_t qubitIdx) {
     std::vector<std::size_t> controls;
@@ -168,10 +178,10 @@ public:
   /// context is. If the context is sample, then we do nothing but store the
   /// measure qubit, which we then use to do full state sampling when
   /// flushAnySamplingTask() is called. If the context is sample-conditional,
-  /// then we have a circuit that contains if (mz(q)) and we measure the qubit,
-  /// collapse the state, and then store the sample qubit for final full state
-  /// sampling. We also return the bit result. If no execution context, just
-  /// measure, collapse, and return the bit.
+  /// then we have a circuit that contains if (`mz(q)`) and we measure the
+  /// qubit, collapse the state, and then store the sample qubit for final full
+  /// state sampling. We also return the bit result. If no execution context,
+  /// just measure, collapse, and return the bit.
   virtual bool mz(const std::size_t qubitIdx,
                   const std::string &registerName) = 0;
 
@@ -205,8 +215,8 @@ protected:
   /// sampling, or spin_op observation.
   cudaq::ExecutionContext *executionContext = nullptr;
 
-  /// @brief A tracker for allocating and deallocating qubit ids
-  nvqir::QubitIdTracker tracker;
+  /// @brief A tracker for qubit allocation
+  cudaq::QuditIdTracker tracker;
 
   /// @brief The number of qubits that have been allocated
   std::size_t nQubitsAllocated = 0;
@@ -492,7 +502,7 @@ protected:
     registerNameToMeasuredQubit.clear();
   }
 
-  /// @brief Enqueue a new gate application task
+  /// @brief Add a new gate application task to the queue
   void enqueueGate(const std::string name,
                    const std::vector<std::complex<ScalarType>> &matrix,
                    const std::vector<std::size_t> &controls,
@@ -643,7 +653,7 @@ public:
     return qubits;
   }
 
-  /// @brief Deallocate the qubit with give idx
+  /// @brief Deallocate the qubit with give index
   void deallocate(const std::size_t qubitIdx) override {
     if (executionContext) {
       cudaq::info("Deferring qubit {} deallocation", qubitIdx);
@@ -661,7 +671,7 @@ public:
     --nQubitsAllocated;
 
     // Reset the state if we've deallocated all qubits.
-    if (tracker.numAvailable() == tracker.totalNumQubits()) {
+    if (tracker.allDeallocated()) {
       cudaq::info("Deallocated all qubits, reseting state vector.");
       // all qubits deallocated,
       deallocateState();
@@ -678,7 +688,15 @@ public:
     if (nQubitsAllocated == 0)
       return;
 
-    if (qubits.size() == tracker.totalNumQubits() - tracker.numAvailable()) {
+    if (executionContext) {
+      for (auto &qubitIdx : qubits) {
+        cudaq::info("Deferring qubit {} deallocation", qubitIdx);
+        deferredDeallocation.push_back(qubitIdx);
+      }
+      return;
+    }
+
+    if (qubits.size() == tracker.numAllocated()) {
       cudaq::info("Deallocate all qubits.");
       deallocateState();
       for (auto &q : qubits)
@@ -763,7 +781,7 @@ public:
     executionContext = nullptr;
 
     // Reset the state if we've deallocated all qubits.
-    if (tracker.numAvailable() == tracker.totalNumQubits()) {
+    if (tracker.allDeallocated()) {
       if (shouldSetToZero) {
         cudaq::info("In batch mode currently, reset state to |0>");
         // Do not deallocate the state, but reset it to |0>
@@ -895,6 +913,16 @@ public:
         tmp, controls, std::vector<std::size_t>{qubitIdx});
   }
 
+  using CircuitSimulator::phased_rx;
+  void phased_rx(const double phi, const double lambda,
+                 const std::vector<std::size_t> &controls,
+                 const std::size_t qubitIdx) override {
+    std::vector<ScalarType> tmp{static_cast<ScalarType>(phi),
+                                static_cast<ScalarType>(lambda)};
+    enqueueQuantumOperation<nvqir::phased_rx<ScalarType>>(
+        tmp, controls, std::vector<std::size_t>{qubitIdx});
+  }
+
   using CircuitSimulator::swap;
   /// @brief Invoke a general multi-control swap gate
   void swap(const std::vector<std::size_t> &ctrlBits, const std::size_t srcIdx,
@@ -915,7 +943,7 @@ public:
   /// context is. If the context is sample, then we do nothing but store the
   /// measure qubit, which we then use to do full state sampling when
   /// flushAnySamplingTask() is called. If the context is sample-conditional,
-  /// then we have a circuit that contains if (mz(q)) and we measure the
+  /// then we have a circuit that contains if (`mz(q)`) and we measure the
   /// qubit, collapse the state, and then store the sample qubit for final
   /// full state sampling. We also return the bit result. If no execution
   /// context, just measure, collapse, and return the bit.
