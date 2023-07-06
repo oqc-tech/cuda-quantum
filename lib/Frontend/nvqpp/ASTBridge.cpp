@@ -1,4 +1,4 @@
-/*************************************************************** -*- C++ -*- ***
+/*******************************************************************************
  * Copyright (c) 2022 - 2023 NVIDIA Corporation & Affiliates.                  *
  * All rights reserved.                                                        *
  *                                                                             *
@@ -15,7 +15,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/IRMapping.h"
 #include <cxxabi.h>
 #include <fstream>
@@ -343,6 +342,24 @@ ASTBridgeAction::ASTBridgeConsumer::ASTBridgeConsumer(
   assert(mangler && "mangler creation failed");
 }
 
+void ASTBridgeAction::ASTBridgeConsumer::addFunctionDecl(
+    const clang::FunctionDecl *funcDecl, details::QuakeBridgeVisitor &visitor,
+    FunctionType funcTy) {
+  auto funcName = visitor.cxxMangledDeclName(funcDecl);
+  if (module->lookupSymbol(funcName))
+    return;
+  auto loc = toSourceLocation(module->getContext(), &astContext,
+                              funcDecl->getSourceRange());
+  OpBuilder build(module->getBodyRegion());
+  OpBuilder::InsertionGuard guard(build);
+  build.setInsertionPointToEnd(module->getBody());
+  if (isa<clang::CXXMethodDecl>(funcDecl))
+    funcTy = cudaq::opt::factory::toCpuSideFuncType(funcTy);
+  auto func = build.create<func::FuncOp>(loc, funcName, funcTy,
+                                         ArrayRef<NamedAttribute>{});
+  func.setPrivate();
+}
+
 void ASTBridgeAction::ASTBridgeConsumer::HandleTranslationUnit(
     clang::ASTContext &astContext) {
   // First make sure there are no syntax errors, etc.
@@ -390,6 +407,8 @@ void ASTBridgeAction::ASTBridgeConsumer::HandleTranslationUnit(
       if (!hasAnyQubitTypes(func.getFunctionType())) {
         // Flag func as an entry point to a quantum kernel.
         func->setAttr(cudaq::entryPointAttrName, unitAttr);
+        // Generate a declaration for the CPU C++ function.
+        addFunctionDecl(fdPair.second, visitor, func.getFunctionType());
       }
     }
   }

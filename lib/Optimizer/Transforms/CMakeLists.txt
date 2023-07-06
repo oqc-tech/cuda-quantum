@@ -15,20 +15,25 @@ add_cudaq_library(OptTransforms
   AggressiveEarlyInlining.cpp
   ApplyOpSpecialization.cpp
   BasisConversion.cpp
-  CCMem2Reg.cpp
+  CombineQuantumAlloc.cpp
   Decomposition.cpp
   DecompositionPatterns.cpp
   ExpandMeasurements.cpp
+  FactorQuantumAlloc.cpp
   GenKernelExecution.cpp
   GenDeviceCodeLoader.cpp
   LambdaLifting.cpp
+  LoopAnalysis.cpp
+  LoopNormalize.cpp
   LoopUnroll.cpp
   LowerToCFG.cpp
   LowerUnwind.cpp
+  MemToReg.cpp
+  MultiControlDecomposition.cpp
   QuakeAddMetadata.cpp
   QuakeObserveAnsatz.cpp
   QuakeSynthesizer.cpp
-  RaiseToAffine.cpp
+  RegToMem.cpp
 
   DEPENDS
     OptTransformsPassIncGen
