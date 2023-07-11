@@ -98,8 +98,8 @@ void OQCServerHelper::initialize(BackendConfig config) {
   backendConfig["target"] = config.find("qpu") != config.end() ? config["qpu"] : "simulator";
   backendConfig["qubits"] = 8;
   // Retrieve the API key from the environment variables
-  backendConfig["email"] = "software+no-reply@oxfordquantumcircuits.com"; //getEnvVar("OQC_EMAIL");
-  backendConfig["password"] = std::string("softwAre123@"); //getEnvVar("OQC_PASSWORD");
+  backendConfig["email"] = getEnvVar("OQC_EMAIL");
+  backendConfig["password"] = getEnvVar("OQC_PASSWORD");
   // Construct the API job path
   backendConfig["job_path"] = "/tasks";// backendConfig["url"] + "/tasks";
 }
@@ -248,8 +248,9 @@ RestHeaders OQCServerHelper::getHeaders() {
   j["password"] =  backendConfig.at("password");
 
   std::cout<<"getting headers\n";
-  nlohmann::json response = client.post(backendConfig.at("url"), "/auth", j, headers);
-
+  std::cout<<backendConfig.at("url")+"\n";
+  nlohmann::json response = client.post(backendConfig.at("url")+"/auth", "", j, headers);
+  std::cout<<response.dump();
   // nlohmann::json response;
   std::string key = response.at("access_token");
 
