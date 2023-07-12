@@ -9,7 +9,6 @@
 #include "RestClient.h"
 #include "Logger.h"
 #include <cpr/cpr.h>
-#include <iostream>
 
 namespace cudaq {
 constexpr long validHttpCode = 205;
