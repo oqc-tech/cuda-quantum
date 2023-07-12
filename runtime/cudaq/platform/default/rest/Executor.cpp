@@ -24,26 +24,27 @@ Executor::execute(std::vector<KernelExecution> &codesToExecute) {
 
   std::vector<details::future::Job> ids;
   for (std::size_t i = 0; auto &job : jobs) {
-      cudaq::info("Job (name={}) created, posting to {}", codesToExecute[i].name,
-                  jobPostPath);
+    cudaq::info("Job (name={}) created, posting to {}", codesToExecute[i].name,
+                jobPostPath);
 
-      // Post it, get the response
-      auto response = client.post(jobPostPath, "", job, headers);
-      cudaq::info("Job (name={}) posted, response was {}", codesToExecute[i].name,
-                  response.dump());
+    // Post it, get the response
+    auto response = client.post(jobPostPath, "", job, headers);
+    cudaq::info("Job (name={}) posted, response was {}", codesToExecute[i].name,
+                response.dump());
 
-      // Add the job id and the job name.
+    // Add the job id and the job name.
 
-      auto task_id = serverHelper->extractJobId(response);
+    auto task_id = serverHelper->extractJobId(response);
 
-      if (task_id.empty()){
+    if (task_id.empty()) {
       nlohmann::json tmp(job.at("tasks"));
       auto task_path = serverHelper->constructGetJobPath(tmp[0]);
-      ids.emplace_back(std::make_pair(tmp[0].at("task_id"), codesToExecute[i].name));
-      }else{
-          ids.emplace_back(task_id, codesToExecute[i].name);
-      }
-      i++;
+      ids.emplace_back(
+          std::make_pair(tmp[0].at("task_id"), codesToExecute[i].name));
+    } else {
+      ids.emplace_back(task_id, codesToExecute[i].name);
+    }
+    i++;
   }
 
   auto config = serverHelper->getConfig();

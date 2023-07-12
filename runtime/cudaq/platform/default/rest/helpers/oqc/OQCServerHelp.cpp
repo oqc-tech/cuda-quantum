@@ -12,7 +12,6 @@
 #include "cudaq/utils/cudaq_utils.h"
 #include <fstream>
 #include <thread>
-#include <iostream>
 namespace cudaq {
 
 /// @brief The OQCServerHelper class extends the ServerHelper class to handle
@@ -20,7 +19,6 @@ namespace cudaq {
 /// computation jobs.
 class OQCServerHelper : public ServerHelper {
 private:
-
   /// @brief RestClient used for HTTP requests.
 
   /// @brief Helper method to retrieve the value of an environment variable.
@@ -33,10 +31,8 @@ private:
 
   std::string makeConfig(int shots);
 
-
 public:
   RestClient client;
-
 
   /// @brief Returns the name of the server helper.
   const std::string name() const override { return "oqc"; }
@@ -50,7 +46,8 @@ public:
 
   /// @brief Creates a quantum computation job using the provided kernel
   /// executions and returns the corresponding payload.
-  ServerJobPayload createJob(std::vector<KernelExecution> &circuitCodes) override;
+  ServerJobPayload
+  createJob(std::vector<KernelExecution> &circuitCodes) override;
 
   /// @brief Extracts the job ID from the server's response to a job submission.
   std::string extractJobId(ServerMessage &postResponse) override;
@@ -82,7 +79,8 @@ public:
   cudaq::sample_result processResults(ServerMessage &postJobResponse) override;
 
   std::string get_from_config(BackendConfig config, std::string key);
-  std::string get_from_config(BackendConfig config, std::string key, std::string default_return);
+  std::string get_from_config(BackendConfig config, std::string key,
+                              std::string default_return);
 };
 
 // Initialize the OQC server helper with a given backend configuration
@@ -92,30 +90,33 @@ void OQCServerHelper::initialize(BackendConfig config) {
   // Move the passed config into the member variable backendConfig
   backendConfig = std::move(config);
   // Set the necessary configuration variables for the OQC API
-  backendConfig["url"] =  OQCServerHelper::get_from_config(config, "url");
+  backendConfig["url"] = OQCServerHelper::get_from_config(config, "url");
   backendConfig["version"] = "v0.3";
   backendConfig["user_agent"] = "cudaq/0.3.0";
   backendConfig["target"] = "Lucy";
   backendConfig["qubits"] = 8;
   // Retrieve the API key from the environment variables
   backendConfig["email"] = OQCServerHelper::get_from_config(config, "email");
-  backendConfig["password"] = OQCServerHelper::get_from_config(config, "password");
+  backendConfig["password"] =
+      OQCServerHelper::get_from_config(config, "password");
   // Construct the API job path
-  backendConfig["job_path"] = "/tasks";// backendConfig["url"] + "/tasks";
-
+  backendConfig["job_path"] = "/tasks"; // backendConfig["url"] + "/tasks";
 }
 
-std::string OQCServerHelper::get_from_config(BackendConfig config, std::string key, std::string default_return){
+std::string OQCServerHelper::get_from_config(BackendConfig config,
+                                             std::string key,
+                                             std::string default_return) {
   std::string output = OQCServerHelper::get_from_config(config, key);
-  if (output.empty()){
+  if (output.empty()) {
     return default_return;
   }
   return output;
 }
 
-std::string OQCServerHelper::get_from_config(BackendConfig config, std::string key){
+std::string OQCServerHelper::get_from_config(BackendConfig config,
+                                             std::string key) {
   auto iter = backendConfig.find(key);
-  if (iter != backendConfig.end()){
+  if (iter != backendConfig.end()) {
     return iter->second;
   }
   return "";
@@ -138,33 +139,48 @@ bool OQCServerHelper::keyExists(const std::string &key) const {
   return backendConfig.find(key) != backendConfig.end();
 }
 
-std::vector<std::string> OQCServerHelper::getJobID(int n){
-    RestHeaders headers = OQCServerHelper::getHeaders();
-    nlohmann::json j;
-    std::vector<std::string> output;
-    for(int i = 0; i < n; ++i){
-      nlohmann::json_v3_11_1::json response = client.post(backendConfig.at("url"), backendConfig.at("job_path"), j, headers);
-      output.push_back(response[0]);
-    }
-    return output;
+std::vector<std::string> OQCServerHelper::getJobID(int n) {
+  RestHeaders headers = OQCServerHelper::getHeaders();
+  nlohmann::json j;
+  std::vector<std::string> output;
+  for (int i = 0; i < n; ++i) {
+    nlohmann::json_v3_11_1::json response = client.post(
+        backendConfig.at("url"), backendConfig.at("job_path"), j, headers);
+    output.push_back(response[0]);
+  }
+  return output;
 }
 
-std::string OQCServerHelper::makeConfig(int shots){
-    return "{\"$type\": \"<class 'scc.compiler.config.CompilerConfig'>\", \"$data\": {\"repeats\": "+std::to_string(shots)+", \"repetition_period\": null, \"results_format\": {\"$type\": \"<class 'scc.compiler.config.QuantumResultsFormat'>\", \"$data\": {\"format\": {\"$type\": \"<enum 'scc.compiler.config.InlineResultsProcessing'>\", \"$value\": 1}, \"transforms\": {\"$type\": \"<enum 'scc.compiler.config.ResultsFormatting'>\", \"$value\": 3}}}, \"metrics\": {\"$type\": \"<enum 'scc.compiler.config.MetricsType'>\", \"$value\": 6}, \"active_calibrations\": [], \"optimizations\": {\"$type\": \"<class 'scc.compiler.config.Tket'>\", \"$data\": {\"tket_optimizations\": {\"$type\": \"<enum 'scc.compiler.config.TketOptimizations'>\", \"$value\": 30}}}}}";
+std::string OQCServerHelper::makeConfig(int shots) {
+  return "{\"$type\": \"<class 'scc.compiler.config.CompilerConfig'>\", "
+         "\"$data\": {\"repeats\": " +
+         std::to_string(shots) +
+         ", \"repetition_period\": null, \"results_format\": {\"$type\": "
+         "\"<class 'scc.compiler.config.QuantumResultsFormat'>\", \"$data\": "
+         "{\"format\": {\"$type\": \"<enum "
+         "'scc.compiler.config.InlineResultsProcessing'>\", \"$value\": 1}, "
+         "\"transforms\": {\"$type\": \"<enum "
+         "'scc.compiler.config.ResultsFormatting'>\", \"$value\": 3}}}, "
+         "\"metrics\": {\"$type\": \"<enum "
+         "'scc.compiler.config.MetricsType'>\", \"$value\": 6}, "
+         "\"active_calibrations\": [], \"optimizations\": {\"$type\": \"<class "
+         "'scc.compiler.config.Tket'>\", \"$data\": {\"tket_optimizations\": "
+         "{\"$type\": \"<enum 'scc.compiler.config.TketOptimizations'>\", "
+         "\"$value\": 30}}}}}";
 }
 
 // Create a job for the OQC quantum computer
-ServerJobPayload OQCServerHelper::createJob(std::vector<KernelExecution> &circuitCodes) {
+ServerJobPayload
+OQCServerHelper::createJob(std::vector<KernelExecution> &circuitCodes) {
   // Check if the necessary keys exist in the configuration
   if (!keyExists("target") || !keyExists("qubits") || !keyExists("job_path"))
     throw std::runtime_error("Key doesn't exist in backendConfig.");
   std::vector<ServerMessage> jobs;
   int number_of_circuits = static_cast<int>(circuitCodes.size());
-  std::vector<std::string> task_ids = OQCServerHelper::getJobID(number_of_circuits);
+  std::vector<std::string> task_ids =
+      OQCServerHelper::getJobID(number_of_circuits);
 
-
-
-  for (int i = 0; i<number_of_circuits; i++){
+  for (int i = 0; i < number_of_circuits; i++) {
     nlohmann::json j;
     j["tasks"] = std::vector<nlohmann::json>();
     // Construct the job message
@@ -178,7 +194,9 @@ ServerJobPayload OQCServerHelper::createJob(std::vector<KernelExecution> &circui
 
   // Return a tuple containing the job path, headers, and the job message
   // TODO: return full path
-  return std::make_tuple(backendConfig.at("url") + backendConfig.at("job_path")+"/submit", getHeaders(), jobs);
+  return std::make_tuple(backendConfig.at("url") +
+                             backendConfig.at("job_path") + "/submit",
+                         getHeaders(), jobs);
 }
 
 // From a server message, extract the job ID
@@ -193,7 +211,8 @@ std::string OQCServerHelper::extractJobId(ServerMessage &postResponse) {
 
 // Construct the path to get a job
 std::string OQCServerHelper::constructGetJobPath(ServerMessage &postResponse) {
-  return backendConfig.at("job_path")+"/" + postResponse.at("task_id").get<std::string>() +"/results";
+  return backendConfig.at("job_path") + "/" +
+         postResponse.at("task_id").get<std::string>() + "/results";
 }
 
 // Overloaded version of constructGetJobPath for jobId input
@@ -202,14 +221,16 @@ std::string OQCServerHelper::constructGetJobPath(std::string &jobId) {
     throw std::runtime_error("Key 'job_path' doesn't exist in backendConfig.");
 
   // Return the job path
-  return backendConfig.at("url") + backendConfig.at("job_path")+"/" + jobId + "/results";
+  return backendConfig.at("url") + backendConfig.at("job_path") + "/" + jobId +
+         "/results";
 }
 
 // Construct the path to get the results of a job
 std::string
 OQCServerHelper::constructGetResultsPath(ServerMessage &postResponse) {
   // Return the results path
-  return backendConfig.at("job_path") +"/"+ postResponse.at("task_id").get<std::string>() +"/results";
+  return backendConfig.at("job_path") + "/" +
+         postResponse.at("task_id").get<std::string>() + "/results";
 }
 
 // Overloaded version of constructGetResultsPath for jobId input
@@ -218,7 +239,7 @@ std::string OQCServerHelper::constructGetResultsPath(std::string &jobId) {
     throw std::runtime_error("Key 'job_path' doesn't exist in backendConfig.");
 
   // Return the results path
-  return backendConfig.at("job_path")+"/" + jobId + "/results";
+  return backendConfig.at("job_path") + "/" + jobId + "/results";
 }
 
 // Get the results from a given path
@@ -261,13 +282,14 @@ RestHeaders OQCServerHelper::getHeaders() {
   nlohmann::json j;
   j["email"] = backendConfig.at("email");
 
-  j["password"] =  backendConfig.at("password");
+  j["password"] = backendConfig.at("password");
 
-  nlohmann::json response = client.post(backendConfig.at("url")+"/auth", "", j, headers);
+  nlohmann::json response =
+      client.post(backendConfig.at("url") + "/auth", "", j, headers);
   // nlohmann::json response;
   std::string key = response.at("access_token");
 
-  headers["Authorization"] = "Bearer "+key;
+  headers["Authorization"] = "Bearer " + key;
   headers["Content-Type"] = "application/json";
   // Return the headers
   return headers;

@@ -6,7 +6,6 @@
  * the terms of the Apache License 2.0 which accompanies this distribution.    *
  *******************************************************************************/
 
-
 #include "CUDAQTestUtils.h"
 #include "common/FmtCore.h"
 #include "cudaq/algorithm.h"
@@ -20,8 +19,8 @@ std::string backendStringTemplate =
     "oqc;emulate;false;url;http://localhost:{};email;{};password;{}";
 
 CUDAQ_TEST(OQCTester, checkSampleSync) {
-  auto backendString =
-      fmt::format(fmt::runtime(backendStringTemplate), mockPort, email, password);
+  auto backendString = fmt::format(fmt::runtime(backendStringTemplate),
+                                   mockPort, email, password);
 
   auto &platform = cudaq::get_platform();
   platform.setTargetBackend(backendString);
@@ -37,8 +36,8 @@ CUDAQ_TEST(OQCTester, checkSampleSync) {
 }
 
 CUDAQ_TEST(OQCTester, checkSampleAsync) {
-  auto backendString =
-      fmt::format(fmt::runtime(backendStringTemplate), mockPort, email, password);
+  auto backendString = fmt::format(fmt::runtime(backendStringTemplate),
+                                   mockPort, email, password);
 
   auto &platform = cudaq::get_platform();
   platform.setTargetBackend(backendString);
@@ -54,8 +53,8 @@ CUDAQ_TEST(OQCTester, checkSampleAsync) {
 }
 
 CUDAQ_TEST(OQCTester, checkSampleAsyncLoadFromFile) {
-  auto backendString =
-      fmt::format(fmt::runtime(backendStringTemplate), mockPort, email, password);
+  auto backendString = fmt::format(fmt::runtime(backendStringTemplate),
+                                   mockPort, email, password);
 
   auto &platform = cudaq::get_platform();
   platform.setTargetBackend(backendString);
@@ -87,8 +86,8 @@ CUDAQ_TEST(OQCTester, checkSampleAsyncLoadFromFile) {
 }
 
 CUDAQ_TEST(OQCTester, checkObserveSync) {
-  auto backendString =
-      fmt::format(fmt::runtime(backendStringTemplate), mockPort, email, password);
+  auto backendString = fmt::format(fmt::runtime(backendStringTemplate),
+                                   mockPort, email, password);
 
   auto &platform = cudaq::get_platform();
   platform.setTargetBackend(backendString);
@@ -110,8 +109,8 @@ CUDAQ_TEST(OQCTester, checkObserveSync) {
 }
 
 CUDAQ_TEST(OQCTester, checkObserveAsync) {
-  auto backendString =
-      fmt::format(fmt::runtime(backendStringTemplate), mockPort, email, password);
+  auto backendString = fmt::format(fmt::runtime(backendStringTemplate),
+                                   mockPort, email, password);
 
   auto &platform = cudaq::get_platform();
   platform.setTargetBackend(backendString);
@@ -135,8 +134,8 @@ CUDAQ_TEST(OQCTester, checkObserveAsync) {
 }
 
 CUDAQ_TEST(OQCTester, checkObserveAsyncLoadFromFile) {
-  auto backendString =
-      fmt::format(fmt::runtime(backendStringTemplate), mockPort, email, password);
+  auto backendString = fmt::format(fmt::runtime(backendStringTemplate),
+                                   mockPort, email, password);
 
   auto &platform = cudaq::get_platform();
   platform.setTargetBackend(backendString);
