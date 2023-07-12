@@ -33,7 +33,7 @@ std::unique_ptr<T> get(const std::string &name) {
       return it->instantiate();
     }
   }
-  throw std::runtime_error("Cannot find QPU of name: "+ name);
+  return nullptr;
 }
 
 /// @brief Return true if the plugin with given name and type is available.
