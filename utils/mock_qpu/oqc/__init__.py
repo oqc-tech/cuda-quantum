@@ -63,7 +63,7 @@ async def login(username, password):
 # Here we expose a way to post jobs,
 # Must have a Access Token, Job Program must be Adaptive Profile
 # with EntryPoint tag
-@app.post("/job")
+@app.post("/task/submit")
 async def postJob(job: Job,
                   token: Union[str, None] = Header(alias="Authorization",
                                                    default=None)):
@@ -72,9 +72,7 @@ async def postJob(job: Job,
     if 'token' == None:
         raise HTTPException(status_code(401), detail="Credentials not provided")
 
-    print('Posting job with name = ', job.name, job.count)
-    name = job.name
-    newId = str(uuid.uuid4())
+    newId = job.task_id
     program = job.program
     decoded = base64.b64decode(program)
     m = llvm.module.parse_bitcode(decoded)
@@ -121,7 +119,7 @@ async def getJob(jobId: str):
     # Simulate asynchronous execution
     if countJobGetRequests < 3:
         countJobGetRequests += 1
-        return {"status": "running"}
+        return {"results": None}
 
     countJobGetRequests = 0
     name, counts = createdJobs[jobId]
@@ -129,7 +127,7 @@ async def getJob(jobId: str):
     for bits, count in counts.items():
         retData += [bits] * count
 
-    res = {"status": "completed", "results": {retData}}
+    res = {"results": {retData}}
     return res
 
 @app.get("/task")

@@ -28,8 +28,7 @@ Executor::execute(std::vector<KernelExecution> &codesToExecute) {
                   jobPostPath);
 
       // Post it, get the response
-      // TODO: fix this URL 
-      auto response = client.post("127.0.0.1:5000"+ jobPostPath, "", job, headers);
+      auto response = client.post(jobPostPath, "", job, headers);
       cudaq::info("Job (name={}) posted, response was {}", codesToExecute[i].name,
                   response.dump());
 

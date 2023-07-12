@@ -80,6 +80,9 @@ public:
   /// @brief Processes the server's response to a job retrieval request and
   /// maps the results back to sample results.
   cudaq::sample_result processResults(ServerMessage &postJobResponse) override;
+
+  std::string get_from_config(BackendConfig config, std::string key);
+  std::string get_from_config(BackendConfig config, std::string key, std::string default_return);
 };
 
 // Initialize the OQC server helper with a given backend configuration
@@ -89,19 +92,33 @@ void OQCServerHelper::initialize(BackendConfig config) {
   // Move the passed config into the member variable backendConfig
   backendConfig = std::move(config);
   // Set the necessary configuration variables for the OQC API
-  backendConfig["url"] = "http://localhost:5000";
-  // config.find("url") != config.end()
-  //                            ? config["url"]
-  //                            : "http://localhost:5000";
+  backendConfig["url"] =  OQCServerHelper::get_from_config(config, "url");
   backendConfig["version"] = "v0.3";
   backendConfig["user_agent"] = "cudaq/0.3.0";
-  backendConfig["target"] = config.find("qpu") != config.end() ? config["qpu"] : "simulator";
+  backendConfig["target"] = "Lucy";
   backendConfig["qubits"] = 8;
   // Retrieve the API key from the environment variables
-  backendConfig["email"] = getEnvVar("OQC_EMAIL");
-  backendConfig["password"] = getEnvVar("OQC_PASSWORD");
+  backendConfig["email"] = OQCServerHelper::get_from_config(config, "email");
+  backendConfig["password"] = OQCServerHelper::get_from_config(config, "password");
   // Construct the API job path
   backendConfig["job_path"] = "/tasks";// backendConfig["url"] + "/tasks";
+
+}
+
+std::string OQCServerHelper::get_from_config(BackendConfig config, std::string key, std::string default_return){
+  std::string output = OQCServerHelper::get_from_config(config, key);
+  if (output.empty()){
+    return default_return;
+  }
+  return output;
+}
+
+std::string OQCServerHelper::get_from_config(BackendConfig config, std::string key){
+  auto iter = backendConfig.find(key);
+  if (iter != backendConfig.end()){
+    return iter->second;
+  }
+  return "";
 }
 
 // Retrieve an environment variable
@@ -123,7 +140,6 @@ bool OQCServerHelper::keyExists(const std::string &key) const {
 
 std::vector<std::string> OQCServerHelper::getJobID(int n){
     RestHeaders headers = OQCServerHelper::getHeaders();
-    std::cout<<"getting task id\n";
     nlohmann::json j;
     std::vector<std::string> output;
     for(int i = 0; i < n; ++i){
@@ -162,7 +178,7 @@ ServerJobPayload OQCServerHelper::createJob(std::vector<KernelExecution> &circui
 
   // Return a tuple containing the job path, headers, and the job message
   // TODO: return full path
-  return std::make_tuple(backendConfig.at("job_path")+"/submit", getHeaders(), jobs);
+  return std::make_tuple(backendConfig.at("url") + backendConfig.at("job_path")+"/submit", getHeaders(), jobs);
 }
 
 // From a server message, extract the job ID
@@ -247,17 +263,13 @@ RestHeaders OQCServerHelper::getHeaders() {
 
   j["password"] =  backendConfig.at("password");
 
-  std::cout<<"getting headers\n";
-  std::cout<<backendConfig.at("url")+"\n";
   nlohmann::json response = client.post(backendConfig.at("url")+"/auth", "", j, headers);
-  std::cout<<response.dump();
   // nlohmann::json response;
   std::string key = response.at("access_token");
 
   headers["Authorization"] = "Bearer "+key;
   headers["Content-Type"] = "application/json";
   // Return the headers
-  std::cout<<"returning headers \n";
   return headers;
 }
 

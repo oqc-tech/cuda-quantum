@@ -28,8 +28,6 @@ nlohmann::json RestClient::post(const std::string_view remoteUrl,
   cudaq::info("Posting to {}/{} with data = {}", remoteUrl, path, post.dump());
 
   auto actualPath = std::string(remoteUrl) + std::string(path);
-  std::cout<<"getting the actual path\n";
-  std::cout<< actualPath;
   auto r = cpr::Post(cpr::Url{actualPath}, cpr::Body(post.dump()), cprHeaders,
                      cpr::VerifySsl(false));
 

@@ -16,7 +16,7 @@ from multiprocessing import Process
 import cudaq
 from cudaq import spin
 
-from utils.mock_qpu.quantinuum import startServer
+from utils.mock_qpu.OQC import startServer
 
 # Define the port for the mock server
 port = 62444
@@ -32,16 +32,9 @@ def assert_close(got) -> bool:
 
 @pytest.fixture(scope="session", autouse=True)
 def startUpMockServer():
-    # We need a Fake Credentials Config file
-    credsName = '{}/FakeConfig.config'.format(os.environ["HOME"])
-    f = open(credsName, 'w')
-    f.write('key: {}\nrefresh: {}\ntime: 0'.format("hello", "rtoken"))
-    f.close()
 
     # Set the targeted QPU
-    cudaq.set_target('oqc',
-                     url='http://localhost:{}'.format(port),
-                     credentials=credsName)
+    cudaq.set_target('oqc', url='http://localhost:{}'.format(port), email={}, password={})
 
     # Launch the Mock Server
     p = Process(target=startServer, args=(port,))
@@ -55,8 +48,8 @@ def startUpMockServer():
     os.remove(credsName)
 
 
-def test_quantinuum_sample():
-    # Create the kernel we'd like to execute on Quantinuum
+def test_OQC_sample():
+    # Create the kernel we'd like to execute on OQC
     kernel = cudaq.make_kernel()
     qubits = kernel.qalloc(2)
     kernel.h(qubits[0])
@@ -76,7 +69,7 @@ def test_quantinuum_sample():
     assert ('11' in counts)
 
     # Run sample, but do so asynchronously. This enters
-    # the execution job into the remote Quantinuum job queue.
+    # the execution job into the remote OQC job queue.
     future = cudaq.sample_async(kernel)
     # We could go do other work, but since this
     # is a mock server, get the result
@@ -105,7 +98,7 @@ def test_quantinuum_sample():
     assert ('11' in counts)
 
 
-def test_quantinuum_observe():
+def test_OQC_observe():
     # Create the parameterized ansatz
     kernel, theta = cudaq.make_kernel(float)
     qreg = kernel.qalloc(2)
@@ -117,7 +110,7 @@ def test_quantinuum_observe():
     hamiltonian = 5.907 - 2.1433 * spin.x(0) * spin.x(1) - 2.1433 * spin.y(
         0) * spin.y(1) + .21829 * spin.z(0) - 6.125 * spin.z(1)
 
-    # Run the observe task on quantinuum synchronously
+    # Run the observe task on OQC synchronously
     res = cudaq.observe(kernel, hamiltonian, .59)
     want_expectation_value = -1.71
     assert assert_close(res.expectation_z())

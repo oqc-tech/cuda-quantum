@@ -14,14 +14,14 @@
 #include <gtest/gtest.h>
 
 std::string mockPort = "62454";
+std::string email = "";
+std::string password = "";
 std::string backendStringTemplate =
-    "oqc;url;http://localhost:{};qpu:{};credentials;{}";
+    "oqc;emulate;false;url;http://localhost:{};email;{};password;{}";
 
-CUDAQ_TEST(IonQTester, checkSampleSync) {
-  std::string home = std::getenv("HOME");
-  std::string fileName = home + "/FakeCppOQC.config";
+CUDAQ_TEST(OQCTester, checkSampleSync) {
   auto backendString =
-      fmt::format(fmt::runtime(backendStringTemplate), mockPort, qpu, fileName);
+      fmt::format(fmt::runtime(backendStringTemplate), mockPort, email, password);
 
   auto &platform = cudaq::get_platform();
   platform.setTargetBackend(backendString);
@@ -36,11 +36,9 @@ CUDAQ_TEST(IonQTester, checkSampleSync) {
   EXPECT_EQ(counts.size(), 2);
 }
 
-CUDAQ_TEST(IonQTester, checkSampleAsync) {
-  std::string home = std::getenv("HOME");
-  std::string fileName = home + "/FakeCppOQC.config";
+CUDAQ_TEST(OQCTester, checkSampleAsync) {
   auto backendString =
-      fmt::format(fmt::runtime(backendStringTemplate), mockPort, fileName);
+      fmt::format(fmt::runtime(backendStringTemplate), mockPort, email, password);
 
   auto &platform = cudaq::get_platform();
   platform.setTargetBackend(backendString);
@@ -55,11 +53,9 @@ CUDAQ_TEST(IonQTester, checkSampleAsync) {
   EXPECT_EQ(counts.size(), 2);
 }
 
-CUDAQ_TEST(IonQTester, checkSampleAsyncLoadFromFile) {
-  std::string home = std::getenv("HOME");
-  std::string fileName = home + "/FakeCppOQC.config";
+CUDAQ_TEST(OQCTester, checkSampleAsyncLoadFromFile) {
   auto backendString =
-      fmt::format(fmt::runtime(backendStringTemplate), mockPort, fileName);
+      fmt::format(fmt::runtime(backendStringTemplate), mockPort, email, password);
 
   auto &platform = cudaq::get_platform();
   platform.setTargetBackend(backendString);
@@ -90,11 +86,9 @@ CUDAQ_TEST(IonQTester, checkSampleAsyncLoadFromFile) {
   std::remove("saveMe.json");
 }
 
-CUDAQ_TEST(IonQTester, checkObserveSync) {
-  std::string home = std::getenv("HOME");
-  std::string fileName = home + "/FakeCppOQC.config";
+CUDAQ_TEST(OQCTester, checkObserveSync) {
   auto backendString =
-      fmt::format(fmt::runtime(backendStringTemplate), mockPort, fileName);
+      fmt::format(fmt::runtime(backendStringTemplate), mockPort, email, password);
 
   auto &platform = cudaq::get_platform();
   platform.setTargetBackend(backendString);
@@ -115,11 +109,9 @@ CUDAQ_TEST(IonQTester, checkObserveSync) {
   EXPECT_NEAR(result.exp_val_z(), -1.7, 1e-1);
 }
 
-CUDAQ_TEST(IonQTester, checkObserveAsync) {
-  std::string home = std::getenv("HOME");
-  std::string fileName = home + "/FakeCppOQC.config";
+CUDAQ_TEST(OQCTester, checkObserveAsync) {
   auto backendString =
-      fmt::format(fmt::runtime(backendStringTemplate), mockPort, fileName);
+      fmt::format(fmt::runtime(backendStringTemplate), mockPort, email, password);
 
   auto &platform = cudaq::get_platform();
   platform.setTargetBackend(backendString);
@@ -142,12 +134,9 @@ CUDAQ_TEST(IonQTester, checkObserveAsync) {
   EXPECT_NEAR(result.exp_val_z(), -1.7, 1e-1);
 }
 
-CUDAQ_TEST(IonQTester, checkObserveAsyncLoadFromFile) {
-
-  std::string home = std::getenv("HOME");
-  std::string fileName = home + "/FakeCppOQC.config";
+CUDAQ_TEST(OQCTester, checkObserveAsyncLoadFromFile) {
   auto backendString =
-      fmt::format(fmt::runtime(backendStringTemplate), mockPort, fileName);
+      fmt::format(fmt::runtime(backendStringTemplate), mockPort, email, password);
 
   auto &platform = cudaq::get_platform();
   platform.setTargetBackend(backendString);
@@ -184,9 +173,6 @@ CUDAQ_TEST(IonQTester, checkObserveAsyncLoadFromFile) {
 }
 
 int main(int argc, char **argv) {
-  std::string home = std::getenv("HOME");
-  std::string fileName = home + "/FakeCppOQC.config";
-  std::ofstream out(fileName);
   out << "key: key\nrefresh: refresh\ntime: 0";
   out.close();
   ::testing::InitGoogleTest(&argc, argv);
