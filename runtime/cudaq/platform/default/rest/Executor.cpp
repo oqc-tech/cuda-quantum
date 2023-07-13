@@ -38,7 +38,7 @@ Executor::execute(std::vector<KernelExecution> &codesToExecute) {
 
     if (task_id.empty()) {
       nlohmann::json tmp(job.at("tasks"));
-      auto task_path = serverHelper->constructGetJobPath(tmp[0]);
+      serverHelper->constructGetJobPath(tmp[0]);
       ids.emplace_back(
           std::make_pair(tmp[0].at("task_id"), codesToExecute[i].name));
     } else {

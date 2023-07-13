@@ -175,12 +175,11 @@ OQCServerHelper::createJob(std::vector<KernelExecution> &circuitCodes) {
   // Check if the necessary keys exist in the configuration
   if (!keyExists("target") || !keyExists("qubits") || !keyExists("job_path"))
     throw std::runtime_error("Key doesn't exist in backendConfig.");
-  std::vector<ServerMessage> jobs;
-  int number_of_circuits = static_cast<int>(circuitCodes.size());
+  std::vector<ServerMessage> jobs(circuitCodes.size());
   std::vector<std::string> task_ids =
-      OQCServerHelper::getJobID(number_of_circuits);
+      OQCServerHelper::getJobID(static_cast<int>(circuitCodes.size()));
 
-  for (int i = 0; i < number_of_circuits; i++) {
+  for (size_t i = 0; i < circuitCodes.size(); ++i) {
     nlohmann::json j;
     j["tasks"] = std::vector<nlohmann::json>();
     // Construct the job message
@@ -189,7 +188,7 @@ OQCServerHelper::createJob(std::vector<KernelExecution> &circuitCodes) {
     job["config"] = makeConfig(static_cast<int>(shots));
     job["program"] = circuitCodes[i].code;
     j["tasks"].push_back(job);
-    jobs.push_back(j);
+    jobs[i] = j;
   }
 
   // Return a tuple containing the job path, headers, and the job message
@@ -286,7 +285,7 @@ RestHeaders OQCServerHelper::getHeaders() {
 
   nlohmann::json response =
       client.post(backendConfig.at("url") + "/auth", "", j, headers);
-  // nlohmann::json response;
+
   std::string key = response.at("access_token");
 
   headers["Authorization"] = "Bearer " + key;

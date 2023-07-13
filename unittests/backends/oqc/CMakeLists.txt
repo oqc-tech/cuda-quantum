@@ -7,9 +7,7 @@
 # ============================================================================ #
 
 add_executable(test_oqc oqcTester.cpp)
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT APPLE)
-  target_link_options(test_oqc PRIVATE -Wl,--no-as-needed)
-endif()
+target_link_options(test_oqc PRIVATE -Wl,--no-as-needed)
 target_compile_definitions(test_oqc PRIVATE -DNVQIR_BACKEND_NAME=oqc)
 target_include_directories(test_oqc PRIVATE ../..)
 target_link_libraries(test_oqc

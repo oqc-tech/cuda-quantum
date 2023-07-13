@@ -1,15 +1,16 @@
-/****************************************************************-*- C++ -*-****
+/*************************************************************** -*- C++ -*- ***
  * Copyright (c) 2022 - 2023 NVIDIA Corporation & Affiliates.                  *
  * All rights reserved.                                                        *
  *                                                                             *
  * This source code and the accompanying materials are made available under    *
  * the terms of the Apache License 2.0 which accompanies this distribution.    *
- ******************************************************************************/
+ *******************************************************************************/
 
 #pragma once
 #include "common/ExecutionContext.h"
 #include "common/RestClient.h"
 #include "common/ServerHelper.h"
+
 namespace cudaq {
 
 /// @brief The Executor provides an abstraction for executing compiled
@@ -23,13 +24,12 @@ protected:
 
   /// @brief The ServerHelper, providing system-specific JSON-formatted
   /// job posts and results translation
+  ServerHelper *serverHelper;
 
   /// @brief The number of shots to execute
   std::size_t shots = 100;
 
 public:
-  ServerHelper *serverHelper;
-
   Executor() = default;
   virtual ~Executor() = default;
 
