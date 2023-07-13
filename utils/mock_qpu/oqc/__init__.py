@@ -5,13 +5,16 @@
 # This source code and the accompanying materials are made available under     #
 # the terms of the Apache License 2.0 which accompanies this distribution.     #
 # ============================================================================ #
-import cudaq
+from typing import Union
 
-from fastapi import FastAPI, Request, HTTPException, Header
-from typing import Optional, Union
-import uvicorn, uuid, json, base64, ctypes
-from pydantic import BaseModel
+import base64
+import ctypes
+import cudaq
+import uuid
+import uvicorn
+from fastapi import FastAPI, HTTPException, Header
 from llvmlite import binding as llvm
+from pydantic import BaseModel
 
 # Define the REST Server App
 app = FastAPI()
@@ -64,7 +67,7 @@ async def login(username, password):
 # Must have a Access Token, Job Program must be Adaptive Profile
 # with EntryPoint tag
 @app.post("/task/submit")
-async def postJob(job: Job,
+async def postJob(task : Task,
                   token: Union[str, None] = Header(alias="Authorization",
                                                    default=None)):
     global createdJobs, shots
@@ -72,8 +75,8 @@ async def postJob(job: Job,
     if 'token' == None:
         raise HTTPException(status_code(401), detail="Credentials not provided")
 
-    newId = job.task_id
-    program = job.program
+    newId = task.task_id
+    program = task.program
     decoded = base64.b64decode(program)
     m = llvm.module.parse_bitcode(decoded)
     mstr = str(m)
@@ -98,7 +101,7 @@ async def postJob(job: Job,
 
     # Invoke the Kernel
     cudaq.testing.toggleBaseProfile()
-    qubits, context = cudaq.testing.initialize(numQubitsRequired, job.count)
+    qubits, context = cudaq.testing.initialize(numQubitsRequired, task.count)
     kernel()
     results = cudaq.testing.finalize(qubits, context)
     results.dump()
