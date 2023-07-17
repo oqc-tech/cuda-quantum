@@ -86,7 +86,6 @@ public:
 // Initialize the OQC server helper with a given backend configuration
 void OQCServerHelper::initialize(BackendConfig config) {
   cudaq::info("Initializing OQC Backend.");
-  // TODO: fix up fetching these results
   // Move the passed config into the member variable backendConfig
   backendConfig = std::move(config);
   // Set the necessary configuration variables for the OQC API
@@ -192,7 +191,6 @@ OQCServerHelper::createJob(std::vector<KernelExecution> &circuitCodes) {
   }
 
   // Return a tuple containing the job path, headers, and the job message
-  // TODO: return full path
   return std::make_tuple(backendConfig.at("url") +
                              backendConfig.at("job_path") + "/submit",
                          getHeaders(), jobs);
