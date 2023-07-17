@@ -600,6 +600,7 @@ public:
 
       auto *newOp = builder.clone(*op, mapper);
       assert(newOp->getNumResults() == 0);
+      (void)newOp;
       op->erase();
     }
   }
