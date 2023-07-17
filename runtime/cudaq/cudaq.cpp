@@ -142,7 +142,7 @@ void cudaq::registry::deviceCodeHolderAdd(const char *key, const char *code) {
 // including adding the trampoline to call the runtime to launch the kernel.
 //===----------------------------------------------------------------------===//
 
-static std::vector<std::string_view> kernelRegistry;
+static std::vector<std::string> kernelRegistry;
 
 static std::map<std::string, cudaq::KernelArgsCreator> argsCreators;
 static std::map<std::string, std::string> lambdaNames;
@@ -176,6 +176,11 @@ bool cudaq::__internal__::isLibraryMode(const std::string &kernelname) {
 //===----------------------------------------------------------------------===//
 
 namespace cudaq {
+
+/// @brief Global boolean that disables
+/// target modification.
+bool disallowTargetModification = false;
+
 void set_target_backend(const char *backend) {
   std::string backendName(backend);
   auto &platform = cudaq::get_platform();

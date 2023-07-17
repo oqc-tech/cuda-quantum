@@ -1405,15 +1405,16 @@ bool QuakeBridgeVisitor::VisitCallExpr(clang::CallExpr *x) {
                                        kernelArgs);
         return inlinedFinishControlNegations();
       }
-      ValueRange argRange = args;
       if (auto func =
               dyn_cast_or_null<func::ConstantOp>(calleeValue.getDefiningOp())) {
         auto funcTy = cast<FunctionType>(func.getType());
         auto callableSym = func.getValueAttr();
         inlinedStartControlNegations();
+        auto kernelArgs =
+            convertKernelArgs(builder, loc, 2, args, funcTy.getInputs());
         builder.create<quake::ApplyOp>(loc, funcTy.getResults(), callableSym,
                                        /*isAdjoint=*/false, ctrlValues,
-                                       argRange.drop_front(2));
+                                       kernelArgs);
         return inlinedFinishControlNegations();
       }
       if (auto ty = dyn_cast<cc::LambdaType>(calleeValue.getType())) {
@@ -1445,9 +1446,11 @@ bool QuakeBridgeVisitor::VisitCallExpr(clang::CallExpr *x) {
           calleeSymbol = SymbolRefAttr::get(ctx, mangledName);
           auto funcTy = ty.getSignature();
           inlinedStartControlNegations();
+          auto kernelArgs =
+              convertKernelArgs(builder, loc, 2, args, funcTy.getInputs());
           builder.create<quake::ApplyOp>(loc, funcTy.getResults(), calleeSymbol,
                                          /*isAdjoint=*/false, ctrlValues,
-                                         argRange.drop_front(2));
+                                         kernelArgs);
           return inlinedFinishControlNegations();
         }
         TODO_loc(loc, "value has !cc.lambda type but decl isn't a lambda");
@@ -1500,6 +1503,53 @@ bool QuakeBridgeVisitor::VisitCallExpr(clang::CallExpr *x) {
                                               /*isAdjoint=*/true, ValueRange{},
                                               kernelArgs);
       }
+      if (auto func =
+              dyn_cast_or_null<func::ConstantOp>(calleeValue.getDefiningOp())) {
+        auto calleeSym = func.getValueAttr();
+        auto funcTy = cast<FunctionType>(func.getType());
+        auto kernelArgs =
+            convertKernelArgs(builder, loc, 1, args, funcTy.getInputs());
+        return builder.create<quake::ApplyOp>(
+            loc, funcTy.getResults(), calleeSym,
+            /*isAdjoint=*/true, ValueRange{}, kernelArgs);
+      }
+      if (auto ty = dyn_cast<cc::LambdaType>(calleeValue.getType())) {
+        // In order to autogenerate the control form of the called kernel, we
+        // have to be able to determine precisely which kernel is being called
+        // at this point. If this is a local lambda expression, it is handled
+        // elsewhere. If this is a lambda expression argument, then we have to
+        // recover it or give a compilation error.
+        auto *tyPtr = x->getArg(0)->getType().getTypePtr();
+        auto *recTy = dyn_cast<clang::RecordType>(tyPtr);
+        if (!recTy && isa<clang::AutoType>(tyPtr)) {
+          recTy = dyn_cast_or_null<clang::RecordType>(
+              cast<clang::AutoType>(tyPtr)->desugar().getTypePtr());
+        }
+        if (!recTy && isa<clang::SubstTemplateTypeParmType>(tyPtr)) {
+          auto *ty = cast<clang::SubstTemplateTypeParmType>(tyPtr);
+          recTy = dyn_cast_or_null<clang::RecordType>(
+              ty->getReplacementType().getTypePtr());
+        }
+        if (!recTy) {
+          TODO_loc(loc,
+                   "adjoint does not appear to be on a user-defined kernel");
+        }
+        auto *decl = recTy->getDecl();
+        if (decl->isLambda()) {
+          auto *lambdaClass = cast<clang::CXXRecordDecl>(decl);
+          auto mangledName =
+              generateCudaqKernelName(findCallOperator(lambdaClass));
+          auto calleeSymbol =
+              SymbolRefAttr::get(builder.getContext(), mangledName);
+          auto funcTy = ty.getSignature();
+          auto kernelArgs =
+              convertKernelArgs(builder, loc, 1, args, funcTy.getInputs());
+          return builder.create<quake::ApplyOp>(
+              loc, funcTy.getResults(), calleeSymbol,
+              /*isAdjoint=*/true, ValueRange{}, kernelArgs);
+        }
+        TODO_loc(loc, "value has !cc.lambda type but decl isn't a lambda");
+      }
       TODO_loc(loc, "adjoint does not appear to be on a user-defined kernel");
     }
 
@@ -1519,18 +1569,28 @@ bool QuakeBridgeVisitor::VisitCallExpr(clang::CallExpr *x) {
 
     if (funcName.equals("slice_vector")) {
       auto svecTy = dyn_cast<cc::StdvecType>(args[0].getType());
+      auto eleTy = svecTy.getElementType();
       assert(svecTy && "first argument must be std::vector");
-      auto ptrTy = cc::PointerType::get(builder.getContext());
-      auto vecPtr = builder.create<cc::StdvecDataOp>(loc, ptrTy, args[0]);
-      auto bits = svecTy.getElementType().getIntOrFloatBitWidth();
-      assert(bits > 0);
-      auto scale = builder.create<arith::ConstantIntOp>(loc, (bits + 7) / 8,
-                                                        args[1].getType());
-      auto offset = builder.create<arith::MulIOp>(loc, scale, args[1]);
+      Value offset = args[1];
+      Type ptrTy;
+      Value vecPtr;
+      if (eleTy == builder.getI1Type()) {
+        eleTy = cc::ArrayType::get(builder.getI8Type());
+        ptrTy = cc::PointerType::get(eleTy);
+        vecPtr = builder.create<cc::StdvecDataOp>(loc, ptrTy, args[0]);
+        auto bits = svecTy.getElementType().getIntOrFloatBitWidth();
+        assert(bits > 0);
+        auto scale = builder.create<arith::ConstantIntOp>(loc, (bits + 7) / 8,
+                                                          args[1].getType());
+        offset = builder.create<arith::MulIOp>(loc, scale, args[1]);
+      } else {
+        ptrTy = cc::PointerType::get(eleTy);
+        vecPtr = builder.create<cc::StdvecDataOp>(loc, ptrTy, args[0]);
+      }
       auto ptr = builder.create<cc::ComputePtrOp>(loc, ptrTy, vecPtr,
                                                   ArrayRef<Value>{offset});
-      return pushValue(builder.create<cc::StdvecInitOp>(loc, args[0].getType(),
-                                                        ptr, args[2]));
+      return pushValue(
+          builder.create<cc::StdvecInitOp>(loc, svecTy, ptr, args[2]));
     }
 
     TODO_loc(loc, "unknown function, " + funcName + ", in cudaq namespace");

@@ -46,6 +46,17 @@ static void addIQMPipeline(OpPassManager &pm) {
   pm.addPass(createBasisConversionPass(options));
 }
 
+static void addIonQPipeline(OpPassManager &pm) {
+  using namespace cudaq::opt;
+  std::string basis[] = {
+      "h",  "s", "t", "r1", "rx",   "ry",
+      "rz", "x", "y", "z",  "x(1)", // TODO set to ms, gpi, gpi2
+  };
+  BasisConversionPassOptions options;
+  options.basis = basis;
+  pm.addPass(createBasisConversionPass(options));
+}
+
 void cudaq::opt::registerTargetPipelines() {
   PassPipelineRegistration<>("oqc-gate-set-mapping",
                              "Convert kernels to OQC gate set.",
@@ -56,4 +67,7 @@ void cudaq::opt::registerTargetPipelines() {
   PassPipelineRegistration<>("quantinuum-gate-set-mapping",
                              "Convert kernels to Quantinuum gate set.",
                              addQuantinuumPipeline);
+  PassPipelineRegistration<>("ionq-gate-set-mapping",
+                             "Convert kernels to IonQ gate set.",
+                             addIonQPipeline);
 }

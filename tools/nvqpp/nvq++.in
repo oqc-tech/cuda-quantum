@@ -152,7 +152,7 @@ CUDAQ_INCLUDE_PATH="${install_dir}/include"
 if [ ! -f "${install_dir}/include/cudaq.h" ]; then
 	# If the header is not there, then we are likely in
 	# the build directory for testing.
-	if [ "@CMAKE_BINARY_DIR@" == "${install_dir}" ]; then
+	if [ "@CMAKE_BINARY_DIR@" -ef "${install_dir}" ]; then
 		CUDAQ_INCLUDE_PATH="@CMAKE_SOURCE_DIR@/runtime"
 		INCLUDES="-I @CMAKE_SOURCE_DIR@/tpls/fmt/include"
 	else
@@ -171,7 +171,7 @@ if [ -d "${llvm_install_dir}/bin" -a \
 fi
 
 # Compiler and linker flags
-COMPILER_FLAGS="-std=c++20 -I${CUDAQ_INCLUDE_PATH}"
+COMPILER_FLAGS="-std=c++20 -I${CUDAQ_INCLUDE_PATH} ${CUDAQ_CLANG_EXTRA_ARGS}"
 CLANG_RESOURCE_DIR=""
 # If we are a relocatable package, we want to
 # add compiler flags that will point clang to our repackaged
@@ -263,8 +263,7 @@ while [ $# -ne 0 ]; do
 		shift
 		;;
 	--emit-qir | -emit-qir)
-		EMIT_QIR="$2"
-		shift
+		EMIT_QIR=true
 		;;
 	--emulate | -emulate)
 		CUDAQ_EMULATE_REMOTE=true
@@ -486,7 +485,7 @@ for i in ${SRCS}; do
 	# If LIBRARY_MODE explicitly requested, then
 	# simply compile with the classical compiler.
 	if ${LIBRARY_MODE}; then
-		run ${CMAKE_FALLBACK_HOST_CXX} ${COMPILER_FLAGS} ${INCLUDES} -o ${file}.o -c $i
+		run ${CMAKE_FALLBACK_HOST_CXX} ${COMPILER_FLAGS} -DCUDAQ_LIBRARY_MODE ${INCLUDES} -o ${file}.o -c $i
 		OBJS="${OBJS} ${file}.o"
 		# Go to the next iteration, maybe there
 		# will be cudaq kernels there

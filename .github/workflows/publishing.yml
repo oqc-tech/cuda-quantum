@@ -13,10 +13,6 @@ on:
 
 name: Packages
 
-concurrency:
-  group: ${{ github.workflow }}
-  cancel-in-progress: false
-
 jobs:
   cudaq_hpc:
     name: CUDA Quantum Docker image
@@ -61,7 +57,9 @@ jobs:
         id: assets
         run: |
           release_id=${{ inputs.release_id || steps.artifacts.outputs.release_id }}
-          while [ -z "$(gh release list -R ${{ github.repository }} | grep -s $release_id)" ]; do echo "waiting for assets..." && sleep 300; done
+          while [ -z "$(gh release list -R ${{ github.repository }} | grep -s $release_id)" ];
+          do echo "waiting for assets..." && sleep 300; 
+          done && sleep 300 # upload may take a while...
           github_commit=`gh release view $release_id -R ${{ github.repository }} --json targetCommitish --jq .targetCommitish`
 
           echo "release_id=$release_id" >> $GITHUB_OUTPUT
@@ -186,6 +184,8 @@ jobs:
           # that was used to trigger the GitLab pipeline.
           data_commit=${{ steps.release_info.outputs.data_commit }}
           if $(git cat-file -e $data_commit^{commit} 2> /dev/null); then
+            git config --global user.name "cuda-quantum-bot"
+            git config --global user.email "cuda-quantum-bot@users.noreply.github.com"
             git revert $data_commit --no-edit
             git pull --no-edit && git push
           else 
@@ -198,7 +198,7 @@ jobs:
           release_id=${{ steps.assets.outputs.release_id }}
           gh release view $release_id --json body --jq .body >> $GITHUB_STEP_SUMMARY
           if ${{ steps.publish_release.outcome == 'skipped' }}; then
-            gh release delete $release_id -R ${{ github.repository }} -y --cleanup-tag
+            gh release delete $release_id -R ${{ github.repository }} -y
             echo "Deleted release $release_id."
           fi
         env:
