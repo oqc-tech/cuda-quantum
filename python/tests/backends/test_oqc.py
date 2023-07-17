@@ -33,8 +33,13 @@ def assert_close(got) -> bool:
 @pytest.fixture(scope="session", autouse=True)
 def startUpMockServer():
 
+    credsName = '{}/FakeConfig.config'.format(os.environ["HOME"])
+    f = open(credsName, 'w')
+    f.write('email: {}\npassword: {}\ntime: 0'.format("email@email.com", "password"))
+    f.close()
+
     # Set the targeted QPU
-    cudaq.set_target('oqc', url='http://localhost:{}'.format(port), email={}, password={})
+    cudaq.set_target('oqc', url=f'http://localhost:{port}', credentials=credsName)
 
     # Launch the Mock Server
     p = Process(target=startServer, args=(port,))
@@ -45,7 +50,6 @@ def startUpMockServer():
 
     # Kill the server, remove the file
     p.terminate()
-    os.remove(credsName)
 
 
 def test_OQC_sample():

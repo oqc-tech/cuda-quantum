@@ -20,11 +20,19 @@ from pydantic import BaseModel
 app = FastAPI()
 
 
+
 # Jobs look like the following type
 class Task(BaseModel):
     task_id: str
     program: str
-    compiler_config: int
+    config: str
+
+class TaskBody(BaseModel):
+    tasks: list[Task]
+
+class AuthModel(BaseModel):
+    email: str
+    password: str
 
 
 # Keep track of Job Ids to their Names
@@ -59,53 +67,56 @@ def getNumRequiredQubits(function):
 
 # Here we test that the login endpoint works
 @app.post("/auth")
-async def login(username, password):
-    return {"token": "auth_token"}
+async def login(auth_info: AuthModel):
+    return {"access_token": "auth_token"}
 
 
 # Here we expose a way to post jobs,
 # Must have a Access Token, Job Program must be Adaptive Profile
 # with EntryPoint tag
-@app.post("/task/submit")
-async def postJob(task : Task,
-                  token: Union[str, None] = Header(alias="Authorization",
-                                                   default=None)):
+@app.post("/tasks/submit")
+async def postJob(
+    tasks : Union[TaskBody, Task],
+    # access_token: Union[str, None] = Header(alias="Authorization",default=None)
+):
     global createdJobs, shots
 
-    if 'token' == None:
-        raise HTTPException(status_code(401), detail="Credentials not provided")
+    # if access_token == None:
+        # raise HTTPException(status_code(401), detail="Credentials not provided")
+    if isinstance(tasks, Task):
+        tasks = TaskBody(tasks=[tasks,])
+    for task in tasks.tasks:
+        newId = task.task_id
+        program = task.program
+        decoded = base64.b64decode(program)
+        m = llvm.module.parse_bitcode(decoded)
+        mstr = str(m)
+        assert ('EntryPoint' in mstr)
 
-    newId = task.task_id
-    program = task.program
-    decoded = base64.b64decode(program)
-    m = llvm.module.parse_bitcode(decoded)
-    mstr = str(m)
-    assert ('EntryPoint' in mstr)
+        # Get the function, number of qubits, and kernel name
+        function = getKernelFunction(m)
+        if function == None:
+            raise Exception("Could not find kernel function")
+        numQubitsRequired = getNumRequiredQubits(function)
+        kernelFunctionName = function.name
 
-    # Get the function, number of qubits, and kernel name
-    function = getKernelFunction(m)
-    if function == None:
-        raise Exception("Could not find kernel function")
-    numQubitsRequired = getNumRequiredQubits(function)
-    kernelFunctionName = function.name
+        print("Kernel name = ", kernelFunctionName)
+        print("Requires {} qubits".format(numQubitsRequired))
 
-    print("Kernel name = ", kernelFunctionName)
-    print("Requires {} qubits".format(numQubitsRequired))
+        # JIT Compile and get Function Pointer
+        engine.add_module(m)
+        engine.finalize_object()
+        engine.run_static_constructors()
+        funcPtr = engine.get_function_address(kernelFunctionName)
+        kernel = ctypes.CFUNCTYPE(None)(funcPtr)
 
-    # JIT Compile and get Function Pointer
-    engine.add_module(m)
-    engine.finalize_object()
-    engine.run_static_constructors()
-    funcPtr = engine.get_function_address(kernelFunctionName)
-    kernel = ctypes.CFUNCTYPE(None)(funcPtr)
-
-    # Invoke the Kernel
-    cudaq.testing.toggleBaseProfile()
-    qubits, context = cudaq.testing.initialize(numQubitsRequired, task.count)
-    kernel()
-    results = cudaq.testing.finalize(qubits, context)
-    results.dump()
-    createdJobs[newId] = (name, results)
+        # Invoke the Kernel
+        cudaq.testing.toggleBaseProfile()
+        qubits, context = cudaq.testing.initialize(numQubitsRequired, 1000)
+        kernel()
+        results = cudaq.testing.finalize(qubits, context)
+        results.dump()
+        createdJobs[newId] = (task.task_id, results)
 
     engine.remove_module(m)
 
@@ -115,27 +126,21 @@ async def postJob(task : Task,
 
 # Retrieve the job, simulate having to wait by counting to 3
 # until we return the job results
-@app.get("/task/{jobId}/results")
+@app.get("/tasks/{jobId}/results")
 async def getJob(jobId: str):
     global countJobGetRequests, createdJobs, shots
 
-    # Simulate asynchronous execution
-    if countJobGetRequests < 3:
-        countJobGetRequests += 1
-        return {"results": None}
-
     countJobGetRequests = 0
     name, counts = createdJobs[jobId]
-    retData = []
+    retData = {}
     for bits, count in counts.items():
-        retData += [bits] * count
+        retData[str(bits)] = count
 
-    res = {"results": {retData}}
-    return res
+    return {"results": retData}
 
-@app.get("/task")
+@app.post("/tasks")
 async def getJob(n = 1):
-    return {"task_ids": [uuid() for _ in range(n)]}
+    return [uuid.uuid4() for _ in range(n)]
 
 
 def startServer(port):
