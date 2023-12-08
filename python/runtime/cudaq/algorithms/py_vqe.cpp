@@ -14,6 +14,30 @@
 
 #include "cudaq/algorithms/gradient.h"
 #include "cudaq/algorithms/optimizer.h"
+#include "common/RestClient.h"
+#include "iostream"
+
+#include "cudaq.h"
+#include "cudaq/Todo.h"
+
+#include <pybind11/eval.h>
+#include <pybind11/stl.h>
+#include <variant>
+
+#include "utils/OpaqueArguments.h"
+
+#include "cudaq/platform/quantum_platform.h"
+
+#include "common/Logger.h"
+
+double get_result(kernel_builder<> &kernel, spin_op &spin_operator, py::args args, int shots){
+  RestClient client;
+  std::cout<< "Just checking in that we make it to this bit\n";
+  nlohmann::json j;
+  j["params"] = x;
+  auto response_json = client.post("127.0.0.1:5000", "send_params", j).json();
+  return response_json["value"]
+}
 
 namespace cudaq {
 
@@ -30,14 +54,13 @@ optimization_result pyVQE(kernel_builder<> &kernel, spin_op &hamiltonian,
     throw std::runtime_error(
         "Kernels with signature other than "
         "`void(List[float])` must provide an `argument_mapper`.");
-
-  return optimizer.optimize(n_params, [&](const std::vector<double> &x,
-                                          std::vector<double> &grad_vec) {
-    py::args params = py::make_tuple(x);
-    observe_result result = pyObserve(kernel, hamiltonian, params, shots);
-    double energy = result.exp_val_z();
-    return energy;
-  });
+  std::cout<<"Checking that I'm here 1\n";
+  return optimizer.optimize(n_params, [&](const std::vector<double> &x, std::vector<double> &grad_vec) {
+      py::args params = py::make_tuple(x);
+      observe_result result = get_result(kernel, hamiltonian, params, shots);
+      // double energy = result.exp_val_z();
+      return energy;
+    });
 }
 
 /// @brief Run `cudaq.vqe()` without a gradient strategy, using the
@@ -45,6 +68,7 @@ optimization_result pyVQE(kernel_builder<> &kernel, spin_op &hamiltonian,
 optimization_result pyVQE(kernel_builder<> &kernel, spin_op &hamiltonian,
                           cudaq::optimizer &optimizer, const int n_params,
                           py::function &argumentMapper, const int shots = -1) {
+  std::cout<<"Checking that I'm here 2\n";
   return optimizer.optimize(n_params, [&](const std::vector<double> &x,
                                           std::vector<double> &grad_vec) {
     py::args params;
@@ -53,8 +77,7 @@ optimization_result pyVQE(kernel_builder<> &kernel, spin_op &hamiltonian,
       params = hasToBeTuple;
     else
       params = py::make_tuple(hasToBeTuple);
-    observe_result result = pyObserve(kernel, hamiltonian, params, shots);
-    double energy = result.exp_val_z();
+    double energy = pyObserve(kernel, hamiltonian, params, shots);
     return energy;
   });
 }
@@ -63,6 +86,7 @@ optimization_result pyVQE(kernel_builder<> &kernel, spin_op &hamiltonian,
 optimization_result pyVQE(kernel_builder<> &kernel, cudaq::gradient &gradient,
                           spin_op &hamiltonian, cudaq::optimizer &optimizer,
                           const int n_params, const int shots = -1) {
+                            std::cout<<"Checking that I'm here 3\n";
   if (kernel.getNumParams() != 1)
     throw std::runtime_error(
         "Kernels with signature other than "
@@ -101,7 +125,7 @@ optimization_result pyVQE(kernel_builder<> &kernel, cudaq::gradient &gradient,
                           spin_op &hamiltonian, cudaq::optimizer &optimizer,
                           const int n_params, py::function &argumentMapper,
                           const int shots = -1) {
-
+                            std::cout<<"Checking that I'm here 4\n";
   // Get the expected value of the system, <H> at the provided
   // vector of parameters. This is passed to `cudaq::gradient::compute`
   // to allow for the calculation of the gradient vector with the

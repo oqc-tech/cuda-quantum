@@ -11,6 +11,14 @@
 #include "observe.h"
 #include "optimizer.h"
 
+#include "common/Logger.h"
+#include "common/RestClient.h"
+#include "common/ServerHelper.h"
+#include "cudaq/utils/cudaq_utils.h"
+#include <fstream>
+#include <thread>
+
+
 namespace cudaq {
 
 ///
@@ -55,6 +63,7 @@ namespace cudaq {
 template <typename QuantumKernel>
 optimization_result vqe(QuantumKernel &&kernel, cudaq::spin_op H,
                         cudaq::optimizer &optimizer, const int n_params) {
+  RestClient client;
   static_assert(
       std::is_invocable_v<QuantumKernel, std::vector<double>>,
       "Invalid parameterized quantum kernel expression. Must have "
@@ -64,12 +73,11 @@ optimization_result vqe(QuantumKernel &&kernel, cudaq::spin_op H,
     throw std::invalid_argument("Provided cudaq::optimizer requires gradients. "
                                 "Please provide a cudaq::gradient instance.");
   }
-
-  return optimizer.optimize(n_params, [&](const std::vector<double> &x,
-                                          std::vector<double> &grad_vec) {
-    double e = cudaq::observe(kernel, H, x);
-    return e;
-  });
+  std::cout<< "Just checking in that we make it to this bit\n";
+  nlohmann::json j;
+  j["params"] = x;
+  auto response_json = client.post("127.0.0.1:5000", "send_params", j).json();
+  return response_json["value"]
 }
 
 ///
@@ -177,15 +185,19 @@ optimization_result vqe(std::size_t shots, QuantumKernel &&kernel,
 /// \endcode
 ///
 template <typename QuantumKernel>
-optimization_result vqe(QuantumKernel &&kernel, cudaq::gradient &gradient,
-                        cudaq::spin_op H, cudaq::optimizer &optimizer,
-                        const int n_params) {
+optimization_result vqe(
+  QuantumKernel &&kernel, 
+  cudaq::gradient &gradient,
+  cudaq::spin_op H, 
+  cudaq::optimizer &optimizer,
+  const int n_params) {
   static_assert(
       std::is_invocable_v<QuantumKernel, std::vector<double>>,
       "Invalid parameterized quantum kernel expression. Must have "
       "void(std::vector<double>) signature, or provide "
       "std::tuple<Args...>(std::vector<double>) ArgMapper function object.");
   auto requires_grad = optimizer.requiresGradients();
+  std::cout << "I'm just making sure this gets printed\n";
   return optimizer.optimize(n_params, [&](const std::vector<double> &x,
                                           std::vector<double> &grad_vec) {
     double e = cudaq::observe(kernel, H, x);
