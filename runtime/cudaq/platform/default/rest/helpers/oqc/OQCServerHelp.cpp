@@ -177,8 +177,6 @@ void OQCServerHelper::initialize(BackendConfig config) {
   config["job_path"] = std::string("/")+std::string(dev_id)+"/tasks/" ; 
   parseConfigForCommonParams(config);
 
-  std::cout << "print kushida auth token" << config["auth_token"] << std::endl;
-
   // Move the passed config into the member variable backendConfig
   backendConfig = std::move(config);
 }
@@ -240,6 +238,9 @@ OQCServerHelper::createJob(std::vector<KernelExecution> &circuitCodes) {
 //    job["task_id"] = task_ids[i];
     job["config"] = makeConfig(static_cast<int>(shots));
     job["program"] = circuitCodes[i].code;
+//    job["qpu_id"] = "qpu:uk:2:d865b5a184";
+    job["qpu_id"] = backendConfig.at("target");
+    job["tag"] = "";
     j["tasks"].push_back(job);
     jobs[i] = j;
   }
