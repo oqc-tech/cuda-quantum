@@ -174,7 +174,7 @@ void OQCServerHelper::initialize(BackendConfig config) {
   char dev_id[128]; 
   sscanf(target.c_str(), "%*[^:]:%*[^:]:%*[^:]:%s", dev_id);
 
-  config["job_path"] = std::string("/")+std::string(dev_id)+"/tasks/" ; 
+  config["job_path"] = std::string("/")+std::string(dev_id)+"/tasks" ; 
   parseConfigForCommonParams(config);
 
   // Move the passed config into the member variable backendConfig
@@ -188,17 +188,16 @@ bool OQCServerHelper::keyExists(const std::string &key) const {
 
 std::vector<std::string> OQCServerHelper::createNTasks(int n) {
   RestHeaders headers = OQCServerHelper::getHeaders();
-  nlohmann::json j;
+  nlohmann::json job;
+  job["task_count"] = 1;
+  job["qpu_id"] = backendConfig.at("target");
+  job["tag"] = "";
   std::vector<std::string> output;
-  for (int i = 0; i < n; ++i) {
-    auto response = client.post(backendConfig.at("url"),
-                                backendConfig.at("job_path"), j, headers);
-    output.push_back(response[0]);
+  for (int iTasks =0 ; iTasks < n; iTasks++){
+     auto response = client.post(backendConfig.at("url"),
+                              backendConfig.at("job_path"), job, headers);
+     output.push_back(response[0]);
   }
-    for (const auto& str : output) {
-        std::cerr << str << " "; 
-    }
-    std::cout << std::endl;
   return output;
 }
 
@@ -227,18 +226,17 @@ OQCServerHelper::createJob(std::vector<KernelExecution> &circuitCodes) {
   if (!keyExists("target") || !keyExists("qubits") || !keyExists("job_path"))
     throw std::runtime_error("Key doesn't exist in backendConfig.");
   std::vector<ServerMessage> jobs(circuitCodes.size());
-//  std::vector<std::string> task_ids =
-//      OQCServerHelper::createNTasks(static_cast<int>(circuitCodes.size()));
+  std::vector<std::string> task_ids =
+      OQCServerHelper::createNTasks(static_cast<int>(circuitCodes.size()));
 
   for (size_t i = 0; i < circuitCodes.size(); ++i) {
     nlohmann::json j;
     j["tasks"] = std::vector<nlohmann::json>();
     // Construct the job message
     nlohmann::json job;
-//    job["task_id"] = task_ids[i];
+    job["task_id"] = task_ids[i];
     job["config"] = makeConfig(static_cast<int>(shots));
     job["program"] = circuitCodes[i].code;
-//    job["qpu_id"] = "qpu:uk:2:d865b5a184";
     job["qpu_id"] = backendConfig.at("target");
     job["tag"] = "";
     j["tasks"].push_back(job);
