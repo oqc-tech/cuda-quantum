@@ -13,6 +13,7 @@
 #include <regex>
 #include <sstream>
 #include <thread>
+#include <iostream>
 
 namespace cudaq {
 
@@ -113,6 +114,16 @@ std::string get_from_config(BackendConfig config, const std::string &key,
   return item;
 }
 
+//For auth token. it shouldn't be converted
+std::string get_from_config_no_low(BackendConfig config, const std::string &key,
+                            const auto &missing_functor) {
+  const auto iter = config.find(key);
+  auto item = iter != config.end() ? iter->second : missing_functor();
+  std::transform(item.begin(), item.end(), item.begin(),
+                 [](auto c) { return c; });
+  return item;
+}
+
 void check_machine_allowed(const std::string &machine) {
   if (Machines.find(machine) == Machines.end()) {
     std::string allowed;
@@ -150,15 +161,23 @@ void OQCServerHelper::initialize(BackendConfig config) {
       make_env_functor("OQC_URL", "https://sandbox.qcaas.oqc.app"));
   config["version"] = "v0.3";
   config["user_agent"] = "cudaq/0.3.0";
-  config["oqc_user_agent"] = "QCaaS Client 3.7.0";
+  config["oqc_user_agent"] = "QCaaS Client 3.9.1";
   config["target"] = "qpu:uk:2:d865b5a184";
       get_from_config(config, "device", make_env_functor("OQC_DEVICE"));;
   config["qubits"] = Machines.at(machine);
-  config["auth_token"] = get_from_config(config, "auth_token", make_env_functor("OQC_AUTH_TOKEN"));
+  config["auth_token"] = get_from_config_no_low(config, "auth_token", 
+                             make_env_functor("OQC_AUTH_TOKEN"));
   // Construct the API job path
-  config["job_path"] = "/tasks"; // config["url"] + "/tasks";
+  //config["job_path"] = "/tasks"; // config["url"] + "/tasks";
+  std::string target = config["target"];
 
+  char dev_id[128]; 
+  sscanf(target.c_str(), "%*[^:]:%*[^:]:%*[^:]:%s", dev_id);
+
+  config["job_path"] = std::string("/")+std::string(dev_id)+"/tasks/" ; 
   parseConfigForCommonParams(config);
+
+  std::cout << "print kushida auth token" << config["auth_token"] << std::endl;
 
   // Move the passed config into the member variable backendConfig
   backendConfig = std::move(config);
@@ -178,24 +197,28 @@ std::vector<std::string> OQCServerHelper::createNTasks(int n) {
                                 backendConfig.at("job_path"), j, headers);
     output.push_back(response[0]);
   }
+    for (const auto& str : output) {
+        std::cerr << str << " "; 
+    }
+    std::cout << std::endl;
   return output;
 }
 
 std::string OQCServerHelper::makeConfig(int shots) {
-  return "{\"$type\": \"<class 'scc.compiler.config.CompilerConfig'>\", "
+  return "{\"$type\": \"<class 'qat.purr.compiler.config.CompilerConfig'>\", "
          "\"$data\": {\"repeats\": " +
          std::to_string(shots) +
          ", \"repetition_period\": null, \"results_format\": {\"$type\": "
-         "\"<class 'scc.compiler.config.QuantumResultsFormat'>\", \"$data\": "
+         "\"<class 'qat.purr.compiler.config.QuantumResultsFormat'>\", \"$data\": "
          "{\"format\": {\"$type\": \"<enum "
-         "'scc.compiler.config.InlineResultsProcessing'>\", \"$value\": 1}, "
+         "'qat.purr.compiler.config.InlineResultsProcessing'>\", \"$value\": 1}, "
          "\"transforms\": {\"$type\": \"<enum "
-         "'scc.compiler.config.ResultsFormatting'>\", \"$value\": 3}}}, "
+         "'qat.purr.compiler.config.ResultsFormatting'>\", \"$value\": 3}}}, "
          "\"metrics\": {\"$type\": \"<enum "
-         "'scc.compiler.config.MetricsType'>\", \"$value\": 6}, "
+         "'qat.purr.compiler.config.MetricsType'>\", \"$value\": 6}, "
          "\"active_calibrations\": [], \"optimizations\": {\"$type\": \"<class "
-         "'scc.compiler.config.Tket'>\", \"$data\": {\"tket_optimizations\": "
-         "{\"$type\": \"<enum 'scc.compiler.config.TketOptimizations'>\", "
+         "'qat.purr.compiler.config.Tket'>\", \"$data\": {\"tket_optimizations\": "
+         "{\"$type\": \"<enum 'qat.purr.compiler.config.TketOptimizations'>\", "
          "\"$value\": 30}}}}}";
 }
 
@@ -206,15 +229,15 @@ OQCServerHelper::createJob(std::vector<KernelExecution> &circuitCodes) {
   if (!keyExists("target") || !keyExists("qubits") || !keyExists("job_path"))
     throw std::runtime_error("Key doesn't exist in backendConfig.");
   std::vector<ServerMessage> jobs(circuitCodes.size());
-  std::vector<std::string> task_ids =
-      OQCServerHelper::createNTasks(static_cast<int>(circuitCodes.size()));
+//  std::vector<std::string> task_ids =
+//      OQCServerHelper::createNTasks(static_cast<int>(circuitCodes.size()));
 
   for (size_t i = 0; i < circuitCodes.size(); ++i) {
     nlohmann::json j;
     j["tasks"] = std::vector<nlohmann::json>();
     // Construct the job message
     nlohmann::json job;
-    job["task_id"] = task_ids[i];
+//    job["task_id"] = task_ids[i];
     job["config"] = makeConfig(static_cast<int>(shots));
     job["program"] = circuitCodes[i].code;
     j["tasks"].push_back(job);
@@ -394,9 +417,9 @@ RestHeaders OQCServerHelper::getHeaders() {
   // Construct the headers
   RestHeaders headers;
 
-  headers["Authentication-Token"] = backendConfig["access_token"];
+  headers["Authentication-Token"] = backendConfig["auth_token"];
   headers["User-agent"] = backendConfig["oqc_user_agent"];
-
+  headers["Content-type"] = "application/json";
   // Return the headers
   return headers;
 }
