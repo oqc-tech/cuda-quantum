@@ -114,9 +114,11 @@ std::string get_from_config(BackendConfig config, const std::string &key,
   return item;
 }
 
-//For auth token. it shouldn't be converted
 std::string get_from_config_no_low(BackendConfig config, const std::string &key,
                             const auto &missing_functor) {
+/// This function does the same with get_from_config, but without lowering
+/// Auth tokens are case sensitive and shouldn't be lowered
+
   const auto iter = config.find(key);
   auto item = iter != config.end() ? iter->second : missing_functor();
   std::transform(item.begin(), item.end(), item.begin(),
@@ -187,18 +189,21 @@ bool OQCServerHelper::keyExists(const std::string &key) const {
 }
 
 std::vector<std::string> OQCServerHelper::createNTasks(int n) {
+/// This function returns the task ids as a vector of string.
+/// The same as "create_task_ids" in QCaaS client, client.py
+
+
   RestHeaders headers = OQCServerHelper::getHeaders();
   nlohmann::json job;
-  job["task_count"] = 1;
-  job["qpu_id"] = backendConfig.at("target");
+  int nTask = n;
+  job["task_count"] = nTask;
+  job["qpu_id"] = backendConfig.at("target"); // qpu:uk:2:d865b5a184
   job["tag"] = "";
   std::vector<std::string> output;
-  for (int iTasks =0 ; iTasks < n; iTasks++){
-     auto response = client.post(backendConfig.at("url"),
+
+  auto response = client.post(backendConfig.at("url"),
                               backendConfig.at("job_path"), job, headers);
-     output.push_back(response[0]);
-  }
-  return output;
+  return response;
 }
 
 std::string OQCServerHelper::makeConfig(int shots) {
