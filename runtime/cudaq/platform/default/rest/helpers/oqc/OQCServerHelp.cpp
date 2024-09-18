@@ -34,6 +34,9 @@ private:
   /// @brief Create n requested tasks placeholders returning uuids for each
   std::vector<std::string> createNTasks(int n);
 
+  /// @brief Gets endpoint of a device
+  std::string get_qpu_endpoint(std::string,std::string,std::string);
+
   /// @brief make a compiler config json string parameterising with number of
   /// shots
   std::string makeConfig(int shots);
@@ -138,6 +141,7 @@ void check_machine_allowed(const std::string &machine) {
   }
 }
 
+
 } // namespace
 
 // Initialize the OQC server helper with a given backend configuration
@@ -157,6 +161,14 @@ void OQCServerHelper::initialize(BackendConfig config) {
     backendConfig = std::move(config);
     return;
   }
+
+  auto device_url = 
+     get_qpu_endpoint(
+        get_from_config(config,"url",make_env_functor("OQC_URL")),
+        get_from_config(config,"device",make_env_functor("OQC_DEVICE")),
+        get_from_config_no_low(
+                  config,"auth_token",make_env_functor("OQC_AUTH_TOKEN"))
+     );
   // Set the necessary configuration variables for the OQC API
   config["url"] = get_from_config(
       config, "url",
@@ -204,6 +216,31 @@ std::vector<std::string> OQCServerHelper::createNTasks(int n) {
   auto response = client.post(backendConfig.at("url"),
                               backendConfig.at("job_path"), job, headers);
   return response;
+}
+
+std::string OQCServerHelper::get_qpu_endpoint(std::string server_url,
+                                              std::string qpu_id,
+                                              std::string auth_token){
+//nlohmann::json RestClient::get(const std::string_view remoteUrl,
+//                               const std::string_view path,
+//                               std::map<std::string, std::string> &headers,
+//                               bool enableSsl) 
+//  RestHeaders headers = OQCServerHelper::getHeaders();
+//  nlohmann::json job;
+//  std::vector<std::string> output;
+//
+//  auto response = client.post(backendConfig.at("url"),
+//                              backendConfig.at("job_path"), job, headers);
+//  return response;
+
+    RestHeaders headers;
+
+    headers["Authentication-Token"] = auth_token;
+    auto response = client.get(server_url, "/admin/qpu",headers,true);
+
+    std::cout << response << std::endl;
+
+    return "aaa";
 }
 
 std::string OQCServerHelper::makeConfig(int shots) {
