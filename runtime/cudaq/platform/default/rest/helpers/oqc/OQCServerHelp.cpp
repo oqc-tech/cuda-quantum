@@ -163,12 +163,20 @@ void OQCServerHelper::initialize(BackendConfig config) {
     return;
   }
 
+  config["entry_url"] = get_from_config(config, 
+                                        "entry_url", 
+                                        make_env_functor("OQC_URL"));
+  config["target"]    = get_from_config(config, 
+                                        "device", 
+                                        make_env_functor("OQC_DEVICE"));
+  config["auth_token"]= get_from_config_no_low(config, 
+                                               "auth_token", 
+                                        make_env_functor("OQC_AUTH_TOKEN"));
   auto [device_url,dev_id] = 
      get_qpu_endpoint(
-        get_from_config(config,"entry_url",make_env_functor("OQC_URL")),
-        get_from_config(config,"device",make_env_functor("OQC_DEVICE")),
-        get_from_config_no_low(
-                  config,"auth_token",make_env_functor("OQC_AUTH_TOKEN"))
+         config["entry_url"],
+         config["target"],
+         config["auth_token"]
      );
   // Set the necessary configuration variables for the OQC API
 
@@ -177,16 +185,10 @@ void OQCServerHelper::initialize(BackendConfig config) {
   config["version"] = "v0.3";
   config["user_agent"] = "cudaq/0.3.0";
   config["oqc_user_agent"] = "QCaaS Client 3.9.1";
-  config["target"] =
-      get_from_config(config, "device", make_env_functor("OQC_DEVICE"));
   config["qubits"] = Machines.at(machine);
-  config["auth_token"] = get_from_config_no_low(config, "auth_token", 
-                             make_env_functor("OQC_AUTH_TOKEN"));
-  // Construct the API job path
-  //config["job_path"] = "/tasks"; // config["url"] + "/tasks";
-  std::string target = config["target"];
 
-  config["job_path"] = std::string("/")+std::string(dev_id)+"/tasks" ; 
+  // Construct the API job path
+  config["job_path"] = std::string("/")+dev_id+"/tasks" ; 
   parseConfigForCommonParams(config);
 
   // Move the passed config into the member variable backendConfig
