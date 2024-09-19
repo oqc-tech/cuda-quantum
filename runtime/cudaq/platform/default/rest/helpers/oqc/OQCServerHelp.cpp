@@ -35,7 +35,8 @@ private:
   std::vector<std::string> createNTasks(int n);
 
   /// @brief Gets endpoint of a device
-  std::string get_qpu_endpoint(std::string,std::string,std::string);
+  std::tuple<std::string,std::string>
+      get_qpu_endpoint(std::string,std::string,std::string);
 
   /// @brief make a compiler config json string parameterising with number of
   /// shots
@@ -162,31 +163,28 @@ void OQCServerHelper::initialize(BackendConfig config) {
     return;
   }
 
-  auto device_url = 
+  auto [device_url,dev_id] = 
      get_qpu_endpoint(
-        get_from_config(config,"url",make_env_functor("OQC_URL")),
+        get_from_config(config,"entry_url",make_env_functor("OQC_URL")),
         get_from_config(config,"device",make_env_functor("OQC_DEVICE")),
         get_from_config_no_low(
                   config,"auth_token",make_env_functor("OQC_AUTH_TOKEN"))
      );
   // Set the necessary configuration variables for the OQC API
-  config["url"] = get_from_config(
-      config, "url",
-      make_env_functor("OQC_URL", "https://sandbox.qcaas.oqc.app"));
+
+  config["url"] = device_url;
+
   config["version"] = "v0.3";
   config["user_agent"] = "cudaq/0.3.0";
   config["oqc_user_agent"] = "QCaaS Client 3.9.1";
-  config["target"] = "qpu:uk:2:d865b5a184";
-      get_from_config(config, "device", make_env_functor("OQC_DEVICE"));;
+  config["target"] =
+      get_from_config(config, "device", make_env_functor("OQC_DEVICE"));
   config["qubits"] = Machines.at(machine);
   config["auth_token"] = get_from_config_no_low(config, "auth_token", 
                              make_env_functor("OQC_AUTH_TOKEN"));
   // Construct the API job path
   //config["job_path"] = "/tasks"; // config["url"] + "/tasks";
   std::string target = config["target"];
-
-  char dev_id[128]; 
-  sscanf(target.c_str(), "%*[^:]:%*[^:]:%*[^:]:%s", dev_id);
 
   config["job_path"] = std::string("/")+std::string(dev_id)+"/tasks" ; 
   parseConfigForCommonParams(config);
@@ -218,29 +216,28 @@ std::vector<std::string> OQCServerHelper::createNTasks(int n) {
   return response;
 }
 
-std::string OQCServerHelper::get_qpu_endpoint(std::string server_url,
-                                              std::string qpu_id,
-                                              std::string auth_token){
-//nlohmann::json RestClient::get(const std::string_view remoteUrl,
-//                               const std::string_view path,
-//                               std::map<std::string, std::string> &headers,
-//                               bool enableSsl) 
-//  RestHeaders headers = OQCServerHelper::getHeaders();
-//  nlohmann::json job;
-//  std::vector<std::string> output;
-//
-//  auto response = client.post(backendConfig.at("url"),
-//                              backendConfig.at("job_path"), job, headers);
-//  return response;
-
+std::tuple<std::string,std::string>
+      OQCServerHelper::get_qpu_endpoint(std::string server_url,
+                                        std::string qpu_id,
+                                        std::string auth_token){
     RestHeaders headers;
 
     headers["Authentication-Token"] = auth_token;
     auto response = client.get(server_url, "/admin/qpu",headers,true);
 
-    std::cout << response << std::endl;
+    for (auto item: response["items"]){
+       if(item["id"] == qpu_id){
+          std::string device_url = item["url"];
+          size_t pos = device_url.find('/', 8); //Start fter "https://"
+          std::string qpu_server_url = device_url.substr(0, pos);
+          std::string qpu_device_id  = device_url.substr(pos+1);
+          return std::make_tuple(qpu_server_url,qpu_device_id);
+       }
+    }
 
-    return "aaa";
+    std::stringstream stream;
+    stream << "No device:"+qpu_id+" is on "+server_url+"." << std::endl;
+    throw std::runtime_error(stream.str());
 }
 
 std::string OQCServerHelper::makeConfig(int shots) {
@@ -287,7 +284,7 @@ OQCServerHelper::createJob(std::vector<KernelExecution> &circuitCodes) {
 
   // Return a tuple containing the job path, headers, and the job message
   return std::make_tuple(backendConfig.at("url") +
-                             backendConfig.at("job_path") + "/submit",
+                         backendConfig.at("job_path") + "/submit",
                          getHeaders(), jobs);
 }
 
