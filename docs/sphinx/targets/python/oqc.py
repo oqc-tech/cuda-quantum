@@ -1,4 +1,5 @@
 import cudaq
+import os
 
 # You only have to set the target once! No need to redefine it
 # for every execution call on your kernel.
@@ -7,10 +8,14 @@ import cudaq
 
 # To use the OQC target you will need to set the following environment variables
 # OQC_URL
-# OQC_EMAIL
-# OQC_PASSWORD
+# OQC_DEVICE
+# OQC_AUTH_TOKEN
 # To setup an account, contact oqc_qcaas_support@oxfordquantumcircuits.com
+# or visit https://oqc.tech/access/oqc-cloud/
 
+os.environ["OQC_URL"]="https://cloud.oqc.app" # For most users
+os.environ["OQC_DEVICE"]="qpu:uk:2:d865b5a184" # Lucy simulator
+os.environ["OQC_AUTH_TOKEN"]=<your_token_is_available_at_https://cloud.oqc.app>
 cudaq.set_target("oqc")
 
 
