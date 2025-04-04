@@ -18,7 +18,10 @@ namespace cudaq {
 
 const std::string Lucy = "lucy";
 const std::string Toshiko = "toshiko";
-const std::map<std::string, uint> Machines = {{Lucy, 8}, {Toshiko, 32}};
+// const std::map<std::string, uint> Machines = {{Lucy, 8}, {Toshiko, 32}};
+const std::map<std::string, uint> Machines = {
+    {Lucy, 8}, {Toshiko, 8}}; // Due to placement issues
+const std::map<uint, std::string> machineGeneration = {{2, Lucy}, {3, Toshiko}};
 
 /// @brief The OQCServerHelper class extends the ServerHelper class to handle
 /// interactions with the OQC server for submitting and retrieving quantum
@@ -143,6 +146,17 @@ void check_machine_allowed(const std::string &machine) {
 
 } // namespace
 
+std::vector<std::string> split_string(const std::string &s, char delimiter) {
+  std::vector<std::string> tokens;
+  std::stringstream ss(s);
+  std::string token;
+
+  while (std::getline(ss, token, delimiter)) {
+    tokens.push_back(token);
+  }
+  return tokens;
+}
+
 // Initialize the OQC server helper with a given backend configuration
 void OQCServerHelper::initialize(BackendConfig config) {
 
@@ -150,8 +164,26 @@ void OQCServerHelper::initialize(BackendConfig config) {
 
   // Fetch machine info before checking emulate because we want to be able to
   // emulate specific machines.
-  auto machine = get_from_config(config, "machine", []() { return Lucy; });
-  check_machine_allowed(machine);
+  // auto machine = get_from_config(config, "machine", []() { return Lucy; });
+  // check_machine_allowed(machine);
+  auto qpu_id_str =
+      get_from_config(config, "device", make_env_functor("OQC_DEVICE"));
+  auto device_id_split = split_string(qpu_id_str, ':');
+  uint device_generation = std::stoul(device_id_split[2]);
+  std::string machine;
+  try {
+    machine = machineGeneration.at(device_generation);
+    std::stringstream msg;
+    msg << "The architecture of OQC device is: " << machine << std::endl;
+    cudaq::info(msg.str());
+  } catch (const std::out_of_range &e) {
+    machine = "NA";
+    std::stringstream msg;
+    msg << "Generation:" << machine << " is not registered.\n Quit."
+        << std::endl;
+    throw std::runtime_error(msg.str());
+  }
+
   config["machine"] = machine;
   const auto emulate_it = config.find("emulate");
   if (emulate_it != config.end() && emulate_it->second == "true") {

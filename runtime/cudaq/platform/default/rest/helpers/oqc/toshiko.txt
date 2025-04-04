@@ -8,7 +8,7 @@
 
 # The format of the file is as follows:
 # 1. You must specify the number of nodes
-Number of nodes: 35
+Number of nodes: 8
 
 # 2. Specifying the number of edges is optional
 Number of edges: ?
@@ -21,37 +21,16 @@ Number of edges: ?
 # - The nodes and lines do not have to be in order.
 # - Connections are assumed to be bidirectional.
 # - Any duplicates will be automatically removed.
-# Theoretical connectivity for Toshiko. Reality is 32 of 35 will be enabled.
-0 --> {1, 9}
-1 --> {2, 8}
-2 --> {3}
-3 --> {4}
-4 --> {7, 5}
-5 --> {6}
-6 --> {15}
-7 --> {14}
-8 --> {11}
-9 --> {10}
-10 --> {18}
-11 --> {12}
-12 --> {13}
-13 --> {17, 14}
-15 --> {16}
-16 --> {24}
-17 --> {21}
-18 --> {19}
-19 --> {28}
-20 --> {21}
-20 --> {27}
-21 --> {22}
-23 --> {26}
-24 --> {25}
-25 --> {34}
-26 --> {33}
-27 --> {30}
-28 --> {29}
-29 --> {30}
-30 --> {31}
-31 --> {32}
-32 --> {33}
-33 --> {34}
+# As Toshiko uses directional graph (CX is directed), serverside compilation
+# is needed. Here all-to-all connection is defined as it would generate the
+# simplest QIR. In this regard I limit the num of qubits to 8.
+# In the future, once the directional graph is implemented on CUDAQ, 
+# we would back to the actual connectivity. But dont forget; Each Toshiko
+# has its own connectivity. Not identical.
+0 --> {1, 2, 3, 4, 5, 6, 7}
+1 --> {2, 3, 4, 5, 6, 7}
+2 --> {3, 4, 5, 6, 7}
+3 --> {4, 5, 6, 7}
+4 --> {5, 6, 7}
+5 --> {6, 7}
+5 --> {7}
