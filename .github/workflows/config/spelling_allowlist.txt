@@ -3,6 +3,7 @@ AFQMC
 API
 APIs
 AST
+AUTH
 Aer
 AlmaLinux
 Anyon
@@ -212,6 +213,8 @@ fmt
 frontend
 frontends
 homogenous
+http
+https
 iff
 increment
 incrementing
@@ -248,6 +251,7 @@ nullary
 observables
 optimizer
 optimizers
+oqc
 parallelization
 parallelize
 parallelizing
@@ -261,6 +265,7 @@ preprocessor
 probability
 programmatically
 pybind
+qpu
 quantize
 quantized
 qubit
@@ -311,6 +316,7 @@ toolchains
 toolset
 transmon
 trotterization
+uk
 unary
 uncomputation
 uncompute
